@@ -17,15 +17,10 @@ import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { OTLPTraceExporter as OTLPTraceExporterHttp } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPLogExporter as OTLPLogExporterHttp } from '@opentelemetry/exporter-logs-otlp-http';
 import { OTLPMetricExporter as OTLPMetricExporterHttp } from '@opentelemetry/exporter-metrics-otlp-http';
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-node';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import type { JWTInput } from 'google-auth-library';
-import { TelemetryTarget } from './index.js';
 
 import * as os from 'node:os';
 import * as path from 'node:path';
-
-import { debugLogger } from '../utils/debugLogger.js';
 
 vi.mock('@opentelemetry/exporter-trace-otlp-grpc');
 vi.mock('@opentelemetry/exporter-logs-otlp-grpc');
@@ -144,24 +139,13 @@ describe('Telemetry SDK', () => {
     expect(NodeSDK.prototype.start).toHaveBeenCalled();
   });
 
-  it('should defer initialization when useCliAuth is true and no credentials are provided', async () => {
-    vi.spyOn(mockConfig, 'getTelemetryUseCliAuth').mockReturnValue(true);
-    vi.spyOn(mockConfig, 'getTelemetryTarget').mockReturnValue(
-      TelemetryTarget.LOCAL,
-    );
-    vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue('');
+  it('should not re-initialize when telemetry is already initialized', async () => {
+    await initializeTelemetry(mockConfig);
+    vi.mocked(NodeSDK.prototype.start).mockClear();
 
-    // 1. Initial state: No credentials.
-    // Should NOT initialize any exporters.
     await initializeTelemetry(mockConfig);
 
-    // Verify nothing was initialized
-    expect(ConsoleSpanExporter).not.toHaveBeenCalled();
-
-    // Verify deferral log
-    expect(debugLogger.log).toHaveBeenCalledWith(
-      expect.stringContaining('deferring telemetry initialization'),
-    );
+    expect(NodeSDK.prototype.start).not.toHaveBeenCalled();
   });
 
   describe('bufferTelemetryEvent', () => {
@@ -181,51 +165,5 @@ describe('Telemetry SDK', () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(callback).toHaveBeenCalled();
     });
-  });
-
-  it('should disable telemetry and log error if useCollector and useCliAuth are both true', async () => {
-    vi.spyOn(mockConfig, 'getTelemetryUseCollector').mockReturnValue(true);
-    vi.spyOn(mockConfig, 'getTelemetryUseCliAuth').mockReturnValue(true);
-
-    await initializeTelemetry(mockConfig);
-
-    expect(debugLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Telemetry configuration error: "useCollector" and "useCliAuth" cannot both be true',
-      ),
-    );
-    expect(NodeSDK.prototype.start).not.toHaveBeenCalled();
-  });
-  it('should log error when re-initializing with different credentials', async () => {
-    const creds1 = { client_email: 'user1@example.com' };
-    const creds2 = { client_email: 'user2@example.com' };
-
-    // 1. Initialize with first account
-    await initializeTelemetry(mockConfig, creds1 as JWTInput);
-
-    // 2. Attempt to initialize with second account
-    await initializeTelemetry(mockConfig, creds2 as JWTInput);
-
-    // 3. Verify error log
-    expect(debugLogger.error).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Telemetry credentials have changed (from user1@example.com to user2@example.com)',
-      ),
-    );
-  });
-
-  it('should NOT log error when re-initializing with SAME credentials', async () => {
-    const creds1 = { client_email: 'user1@example.com' };
-
-    // 1. Initialize with first account
-    await initializeTelemetry(mockConfig, creds1 as JWTInput);
-
-    // 2. Attempt to initialize with same account
-    await initializeTelemetry(mockConfig, creds1 as JWTInput);
-
-    // 3. Verify NO error log
-    expect(debugLogger.error).not.toHaveBeenCalledWith(
-      expect.stringContaining('Telemetry credentials have changed'),
-    );
   });
 });

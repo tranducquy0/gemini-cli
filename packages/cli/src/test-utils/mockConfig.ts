@@ -94,7 +94,6 @@ export const createMockConfig = (overrides: Partial<Config> = {}): Config =>
     getTelemetryTarget: vi.fn().mockReturnValue(''),
     getTelemetryOutfile: vi.fn().mockReturnValue(undefined),
     getTelemetryUseCollector: vi.fn().mockReturnValue(false),
-    getTelemetryUseCliAuth: vi.fn().mockReturnValue(false),
     getGeminiClient: vi.fn().mockReturnValue({
       isInitialized: vi.fn().mockReturnValue(true),
     }),

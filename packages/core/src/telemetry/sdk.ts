@@ -35,7 +35,6 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
-import type { JWTInput } from 'google-auth-library';
 import type { Config } from '../config/config.js';
 import { SERVICE_NAME } from './constants.js';
 import { initializeMetrics } from './metrics.js';
@@ -50,7 +49,6 @@ import {
   getMemoryMonitor,
 } from './memory-monitor.js';
 import { startGlobalEventLoopMonitoring } from './event-loop-monitor.js';
-import { authEvents } from '../code_assist/oauth2.js';
 import { coreEvents, CoreEvent } from '../utils/events.js';
 import {
   logKeychainAvailability,
@@ -91,9 +89,6 @@ let spanProcessor: BatchSpanProcessor | undefined;
 let logRecordProcessor: BatchLogRecordProcessor | undefined;
 let metricReader: PeriodicExportingMetricReader | undefined;
 let telemetryInitialized = false;
-let callbackRegistered = false;
-let authListener: ((newCredentials: JWTInput) => Promise<void>) | undefined =
-  undefined;
 let keychainAvailabilityListener:
   | ((event: KeychainAvailabilityEvent) => void)
   | undefined = undefined;
@@ -101,7 +96,6 @@ let tokenStorageTypeListener:
   | ((event: TokenStorageInitializationEvent) => void)
   | undefined = undefined;
 const telemetryBuffer: Array<() => void | Promise<void>> = [];
-let activeTelemetryEmail: string | undefined;
 
 export function isTelemetrySdkInitialized(): boolean {
   return telemetryInitialized;
@@ -155,52 +149,12 @@ function parseOtlpEndpoint(
   }
 }
 
-export async function initializeTelemetry(
-  config: Config,
-  credentials?: JWTInput,
-): Promise<void> {
+export async function initializeTelemetry(config: Config): Promise<void> {
   if (!config.getTelemetryEnabled()) {
     return;
   }
 
   if (telemetryInitialized) {
-    if (
-      credentials?.client_email &&
-      activeTelemetryEmail &&
-      credentials.client_email !== activeTelemetryEmail
-    ) {
-      const message = `Telemetry credentials have changed (from ${activeTelemetryEmail} to ${credentials.client_email}), but telemetry cannot be re-initialized in this process. Please restart the CLI to use the new account for telemetry.`;
-      debugLogger.error(message);
-    }
-    return;
-  }
-
-  if (config.getTelemetryUseCollector() && config.getTelemetryUseCliAuth()) {
-    debugLogger.error(
-      'Telemetry configuration error: "useCollector" and "useCliAuth" cannot both be true. ' +
-        'CLI authentication is only supported with in-process exporters. ' +
-        'Disabling telemetry.',
-    );
-    return;
-  }
-
-  // If using CLI auth and no credentials provided, defer initialization
-  if (config.getTelemetryUseCliAuth() && !credentials) {
-    // Register a callback to initialize telemetry when the user logs in.
-    // This is done only once.
-    if (!callbackRegistered) {
-      callbackRegistered = true;
-      authListener = async (newCredentials: JWTInput) => {
-        if (config.getTelemetryEnabled() && config.getTelemetryUseCliAuth()) {
-          debugLogger.log('Telemetry reinit with credentials.');
-          await initializeTelemetry(config, newCredentials);
-        }
-      };
-      authEvents.on('post_auth', authListener);
-    }
-    debugLogger.log(
-      'CLI auth is requested but no credentials, deferring telemetry initialization.',
-    );
     return;
   }
 
@@ -319,7 +273,6 @@ export async function initializeTelemetry(
     if (config.getDebugMode()) {
       debugLogger.log('OpenTelemetry SDK started successfully.');
     }
-    activeTelemetryEmail = credentials?.client_email;
     initializeMetrics(config);
 
     // Start memory monitoring if interval is specified via environment variable
@@ -408,10 +361,6 @@ export async function shutdownTelemetry(
     metrics.disable();
     propagation.disable();
     diag.disable();
-    if (authListener) {
-      authEvents.off('post_auth', authListener);
-      authListener = undefined;
-    }
     if (keychainAvailabilityListener) {
       coreEvents.off(
         CoreEvent.TelemetryKeychainAvailability,
@@ -426,7 +375,5 @@ export async function shutdownTelemetry(
       );
       tokenStorageTypeListener = undefined;
     }
-    callbackRegistered = false;
-    activeTelemetryEmail = undefined;
   }
 }

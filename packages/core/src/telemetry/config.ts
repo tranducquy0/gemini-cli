@@ -116,8 +116,5 @@ export async function resolveTelemetrySettings(options: {
     logPrompts,
     outfile,
     useCollector,
-    useCliAuth:
-      parseBooleanEnvFlag(env['GEMINI_TELEMETRY_USE_CLI_AUTH']) ??
-      settings.useCliAuth,
   };
 }

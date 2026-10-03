@@ -225,7 +225,6 @@ export interface TelemetrySettings {
   logPrompts?: boolean;
   outfile?: string;
   useCollector?: boolean;
-  useCliAuth?: boolean;
 }
 
 export interface OutputSettings {
@@ -1099,7 +1098,6 @@ export class Config implements McpContext, AgentLoopContext {
       logPrompts: params.telemetry?.logPrompts ?? true,
       outfile: params.telemetry?.outfile,
       useCollector: params.telemetry?.useCollector,
-      useCliAuth: params.telemetry?.useCliAuth,
     };
     this.usageStatisticsEnabled = params.usageStatisticsEnabled ?? true;
 
@@ -2945,10 +2943,6 @@ export class Config implements McpContext, AgentLoopContext {
 
   getTelemetryUseCollector(): boolean {
     return this.telemetrySettings.useCollector ?? false;
-  }
-
-  getTelemetryUseCliAuth(): boolean {
-    return this.telemetrySettings.useCliAuth ?? false;
   }
 
   /** @deprecated Use geminiClient getter */
