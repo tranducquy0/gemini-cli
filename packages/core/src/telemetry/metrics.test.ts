@@ -133,7 +133,6 @@ describe('Telemetry Metrics', () => {
     (getCommonAttributes as Mock).mockReturnValue({
       'session.id': 'test-session-id',
       'installation.id': 'test-installation-id',
-      'user.email': 'test@example.com',
     });
 
     const metricsJsModule = await import('./metrics.js');
@@ -211,7 +210,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
       });
     });
   });
@@ -233,7 +231,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
       });
     });
   });
@@ -253,7 +250,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(123, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
       });
     });
   });
@@ -275,7 +271,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         approval_mode: 'autoEdit',
       });
     });
@@ -293,7 +288,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
       });
     });
   });
@@ -322,7 +316,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         tokens_after: 100,
         tokens_before: 200,
       });
@@ -364,7 +357,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(tokens, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model,
           type,
         });
@@ -397,7 +389,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(10, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         type: 'added',
         function_name: 'my-fn',
       });
@@ -412,7 +403,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(7, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         type: 'removed',
         function_name: 'my-fn',
       });
@@ -494,7 +484,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           ...attributes,
         });
       } else {
@@ -544,7 +533,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(150, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'default',
         'routing.failed': false,
@@ -571,7 +559,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(200, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'Classifier',
         'routing.failed': true,
@@ -583,7 +570,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'Classifier',
         'routing.failed': true,
@@ -612,7 +598,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(200, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'Classifier',
         'routing.failed': true,
@@ -623,7 +608,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'Classifier',
         'routing.failed': true,
@@ -651,7 +635,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(200, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'Classifier',
         'routing.failed': true,
@@ -662,7 +645,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         'routing.decision_model': 'gemini-pro',
         'routing.decision_source': 'Classifier',
         'routing.failed': true,
@@ -710,7 +692,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         agent_name: 'TestAgent',
         terminate_reason: 'GOAL',
       });
@@ -719,7 +700,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(1000, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         agent_name: 'TestAgent',
       });
 
@@ -727,7 +707,6 @@ describe('Telemetry Metrics', () => {
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(5, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         agent_name: 'TestAgent',
       });
     });
@@ -755,7 +734,6 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         user_tier: 'standard-tier',
       });
       expect(mockHistogramRecordFn).not.toHaveBeenCalled();
@@ -771,13 +749,11 @@ describe('Telemetry Metrics', () => {
       expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         user_tier: 'standard-tier',
       });
       expect(mockHistogramRecordFn).toHaveBeenCalledWith(1500, {
         'session.id': 'test-session-id',
         'installation.id': 'test-installation-id',
-        'user.email': 'test@example.com',
         user_tier: 'standard-tier',
       });
     });
@@ -815,7 +791,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(150, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.gen_ai',
           'gen_ai.token.type': 'input',
@@ -838,7 +813,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(75, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.vertex_ai',
           'gen_ai.token.type': 'output',
@@ -862,7 +836,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(200, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.vertex_ai',
           'gen_ai.token.type': 'input',
@@ -897,7 +870,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(1.25, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.gen_ai',
           'gen_ai.request.model': 'gemini-2.0-flash',
@@ -919,7 +891,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(3.75, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.vertex_ai',
           'gen_ai.request.model': 'gemini-pro',
@@ -943,7 +914,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(0.95, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.vertex_ai',
           'gen_ai.request.model': 'gemini-1.5-pro',
@@ -965,7 +935,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(2.1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           'gen_ai.operation.name': 'generate_content',
           'gen_ai.provider.name': 'gcp.gen_ai',
         });
@@ -1016,7 +985,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(150, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           phase: 'settings_loading',
           auth_type: 'gemini',
           telemetry_enabled: true,
@@ -1033,7 +1001,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(50, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           phase: 'cleanup',
         });
       });
@@ -1057,7 +1024,6 @@ describe('Telemetry Metrics', () => {
           {
             'session.id': 'test-session-id',
             'installation.id': 'test-installation-id',
-            'user.email': 'test@example.com',
             phase: 'total_startup',
             is_tty: true,
             has_question: false,
@@ -1107,7 +1073,6 @@ describe('Telemetry Metrics', () => {
           const expectedAttributes: Record<string, unknown> = {
             'session.id': 'test-session-id',
             'installation.id': 'test-installation-id',
-            'user.email': 'test@example.com',
             memory_type,
           };
 
@@ -1135,7 +1100,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(85.5, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           component: 'tool_execution',
         });
       });
@@ -1149,7 +1113,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(42.3, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
         });
       });
     });
@@ -1164,7 +1127,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(3, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
         });
       });
 
@@ -1177,7 +1139,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(0, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
         });
       });
     });
@@ -1195,7 +1156,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(25, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           function_name: 'Read',
           phase: 'validation',
         });
@@ -1222,21 +1182,18 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenNthCalledWith(1, 50, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           function_name: 'Bash',
           phase: 'preparation',
         });
         expect(mockHistogramRecordFn).toHaveBeenNthCalledWith(2, 1500, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           function_name: 'Bash',
           phase: 'execution',
         });
         expect(mockHistogramRecordFn).toHaveBeenNthCalledWith(3, 75, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           function_name: 'Bash',
           phase: 'result_processing',
         });
@@ -1257,7 +1214,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(0.85, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model: 'gemini-pro',
           metric: 'cache_hit_rate',
           context: 'api_request',
@@ -1276,7 +1232,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(125.5, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model: 'gemini-pro',
           metric: 'tokens_per_operation',
         });
@@ -1296,7 +1251,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(15, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model: 'gemini-pro',
           phase: 'request_preparation',
         });
@@ -1323,21 +1277,18 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenNthCalledWith(1, 250, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model: 'gemini-pro',
           phase: 'network_latency',
         });
         expect(mockHistogramRecordFn).toHaveBeenNthCalledWith(2, 100, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model: 'gemini-pro',
           phase: 'response_processing',
         });
         expect(mockHistogramRecordFn).toHaveBeenNthCalledWith(3, 50, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           model: 'gemini-pro',
           phase: 'token_processing',
         });
@@ -1357,7 +1308,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(85.5, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           category: 'memory_efficiency',
           baseline: 80.0,
         });
@@ -1374,7 +1324,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(92.3, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           category: 'overall_performance',
         });
       });
@@ -1397,7 +1346,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'startup_time',
           severity: 'medium',
           current_value: 1200,
@@ -1408,7 +1356,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(20, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'startup_time',
           severity: 'medium',
           current_value: 1200,
@@ -1432,7 +1379,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'memory_usage',
           severity: 'high',
           current_value: 100,
@@ -1463,7 +1409,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenNthCalledWith(1, 1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'api_latency',
           severity: 'low',
           current_value: 500,
@@ -1472,7 +1417,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'cpu_usage',
           severity: 'high',
           current_value: 90,
@@ -1497,7 +1441,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(20, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'memory_usage',
           category: 'performance_tracking',
           current_value: 120,
@@ -1520,7 +1463,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(-20, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           metric: 'startup_time',
           category: 'optimization',
           current_value: 800,
@@ -1577,7 +1519,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           hook_event_name: 'BeforeTool',
           hook_name: 'test-hook',
           success: true,
@@ -1587,7 +1528,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(150, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           hook_event_name: 'BeforeTool',
           hook_name: 'test-hook',
           success: true,
@@ -1611,7 +1551,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           hook_event_name: 'BeforeTool',
           hook_name: 'check-secrets.sh', // Sanitized
           success: true,
@@ -1683,7 +1622,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           available: true,
         });
       });
@@ -1708,7 +1646,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           type: 'keychain',
           forced: true,
         });
@@ -1732,7 +1669,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
         });
       });
     });
@@ -1770,7 +1706,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(1200, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'isolated',
           headless: false,
           success: true,
@@ -1793,7 +1728,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(1200, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'isolated',
           headless: false,
           success: true,
@@ -1816,7 +1750,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(3000, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'existing',
           headless: true,
           success: false,
@@ -1824,7 +1757,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'existing',
           headless: true,
           error_type: 'timeout',
@@ -1855,7 +1787,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(3, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'isolated',
         });
 
@@ -1863,13 +1794,11 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenNthCalledWith(1, 1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           tool_name: 'click',
         });
         expect(mockCounterAddFn).toHaveBeenNthCalledWith(2, 1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           tool_name: 'type',
         });
       });
@@ -1891,7 +1820,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           enabled: true,
         });
       });
@@ -1908,7 +1836,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           enabled: false,
           disabled_reason: 'no_visual_model',
         });
@@ -1945,7 +1872,6 @@ describe('Telemetry Metrics', () => {
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           success: false,
           session_mode: 'existing',
           vision_enabled: false,
@@ -1955,7 +1881,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(8500, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           success: false,
           session_mode: 'existing',
         });
@@ -1986,7 +1911,6 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(50, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'persistent',
         });
         expect(mockCounterAddFn).not.toHaveBeenCalled();
@@ -2005,14 +1929,12 @@ describe('Telemetry Metrics', () => {
         expect(mockHistogramRecordFn).toHaveBeenCalledWith(300, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'existing',
         });
 
         expect(mockCounterAddFn).toHaveBeenCalledWith(1, {
           'session.id': 'test-session-id',
           'installation.id': 'test-installation-id',
-          'user.email': 'test@example.com',
           session_mode: 'existing',
         });
       });
