@@ -35,174 +35,23 @@ The observability system provides:
 You control telemetry behavior through the `.gemini/settings.json` file.
 Environment variables can override these settings.
 
-| Setting        | Environment Variable              | Description                                         | Values            | Default                 |
-| -------------- | --------------------------------- | --------------------------------------------------- | ----------------- | ----------------------- |
-| `enabled`      | `GEMINI_TELEMETRY_ENABLED`        | Enable or disable telemetry                         | `true`/`false`    | `false`                 |
-| `traces`       | `GEMINI_TELEMETRY_TRACES_ENABLED` | Enable detailed attribute tracing                   | `true`/`false`    | `false`                 |
-| `target`       | `GEMINI_TELEMETRY_TARGET`         | Where to send telemetry data                        | `"gcp"`/`"local"` | `"local"`               |
-| `otlpEndpoint` | `GEMINI_TELEMETRY_OTLP_ENDPOINT`  | OTLP collector endpoint                             | URL string        | `http://localhost:4317` |
-| `otlpProtocol` | `GEMINI_TELEMETRY_OTLP_PROTOCOL`  | OTLP transport protocol                             | `"grpc"`/`"http"` | `"grpc"`                |
-| `outfile`      | `GEMINI_TELEMETRY_OUTFILE`        | Save telemetry to file (overrides `otlpEndpoint`)   | file path         | -                       |
-| `logPrompts`   | `GEMINI_TELEMETRY_LOG_PROMPTS`    | Include prompts in telemetry logs                   | `true`/`false`    | `true`                  |
-| `useCollector` | `GEMINI_TELEMETRY_USE_COLLECTOR`  | Use external OTLP collector (advanced)              | `true`/`false`    | `false`                 |
-| `useCliAuth`   | `GEMINI_TELEMETRY_USE_CLI_AUTH`   | Use CLI credentials for telemetry (GCP target only) | `true`/`false`    | `false`                 |
-| -              | `GEMINI_CLI_SURFACE`              | Optional custom label for traffic reporting         | string            | -                       |
+| Setting        | Environment Variable              | Description                                       | Values            | Default                 |
+| -------------- | --------------------------------- | ------------------------------------------------- | ----------------- | ----------------------- |
+| `enabled`      | `GEMINI_TELEMETRY_ENABLED`        | Enable or disable telemetry                       | `true`/`false`    | `false`                 |
+| `traces`       | `GEMINI_TELEMETRY_TRACES_ENABLED` | Enable detailed attribute tracing                 | `true`/`false`    | `false`                 |
+| `target`       | `GEMINI_TELEMETRY_TARGET`         | Where to send telemetry data                      | `"local"`         | `"local"`               |
+| `otlpEndpoint` | `GEMINI_TELEMETRY_OTLP_ENDPOINT`  | OTLP collector endpoint                           | URL string        | `http://localhost:4317` |
+| `otlpProtocol` | `GEMINI_TELEMETRY_OTLP_PROTOCOL`  | OTLP transport protocol                           | `"grpc"`/`"http"` | `"grpc"`                |
+| `outfile`      | `GEMINI_TELEMETRY_OUTFILE`        | Save telemetry to file (overrides `otlpEndpoint`) | file path         | -                       |
+| `logPrompts`   | `GEMINI_TELEMETRY_LOG_PROMPTS`    | Include prompts in telemetry logs                 | `true`/`false`    | `true`                  |
+| `useCollector` | `GEMINI_TELEMETRY_USE_COLLECTOR`  | Use external OTLP collector (advanced)            | `true`/`false`    | `false`                 |
+| -              | `GEMINI_CLI_SURFACE`              | Optional custom label for traffic reporting       | string            | -                       |
 
 **Note on boolean environment variables:** For boolean settings like `enabled`,
 setting the environment variable to `true` or `1` enables the feature.
 
 For detailed configuration information, see the
 [Configuration guide](../reference/configuration.md).
-
-## Google Cloud telemetry
-
-You can export telemetry data directly to Google Cloud Trace, Cloud Monitoring,
-and Cloud Logging.
-
-### Prerequisites
-
-You must complete several setup steps before enabling Google Cloud telemetry.
-
-1.  Set your Google Cloud project ID:
-
-    - To send telemetry to a separate project:
-
-      **macOS/Linux**
-
-      ```bash
-      export OTLP_GOOGLE_CLOUD_PROJECT="your-telemetry-project-id"
-      ```
-
-      **Windows (PowerShell)**
-
-      ```powershell
-      $env:OTLP_GOOGLE_CLOUD_PROJECT="your-telemetry-project-id"
-      ```
-
-    - To send telemetry to the same project as inference:
-
-      **macOS/Linux**
-
-      ```bash
-      export GOOGLE_CLOUD_PROJECT="your-project-id"
-      ```
-
-      **Windows (PowerShell)**
-
-      ```powershell
-      $env:GOOGLE_CLOUD_PROJECT="your-project-id"
-      ```
-
-2.  Authenticate with Google Cloud using one of these methods:
-
-    - **Method A: Application Default Credentials (ADC)**: Use this method for
-      service accounts or standard `gcloud` authentication.
-
-      - For user accounts:
-        ```bash
-        gcloud auth application-default login
-        ```
-      - For service accounts:
-
-        **macOS/Linux**
-
-        ```bash
-        export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account.json"
-        ```
-
-        **Windows (PowerShell)**
-
-        ```powershell
-        $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\your\service-account.json"
-        ```
-
-    * **Method B: CLI Auth** (Direct export only): Simplest method for local
-      users. Gemini CLI uses the same OAuth credentials you used for login. To
-      enable this, set `useCliAuth: true` in your `.gemini/settings.json`:
-
-      ```json
-      {
-        "telemetry": {
-          "enabled": true,
-          "target": "gcp",
-          "useCliAuth": true
-        }
-      }
-      ```
-
-<!-- prettier-ignore -->
-> [!NOTE]
-> This setting requires **Direct export** (in-process exporters)
-> and cannot be used when `useCollector` is `true`. If both are enabled,
-> telemetry will be disabled.
-
-3.  Ensure your account or service account has these IAM roles:
-
-    - Cloud Trace Agent
-    - Monitoring Metric Writer
-    - Logs Writer
-
-4.  Enable the required Google Cloud APIs:
-    ```bash
-    gcloud services enable \
-      cloudtrace.googleapis.com \
-      monitoring.googleapis.com \
-      logging.googleapis.com \
-      --project="$OTLP_GOOGLE_CLOUD_PROJECT"
-    ```
-
-### Direct export
-
-We recommend using direct export to send telemetry directly to Google Cloud
-services.
-
-1.  Enable telemetry in `.gemini/settings.json`:
-    ```json
-    {
-      "telemetry": {
-        "enabled": true,
-        "target": "gcp"
-      }
-    }
-    ```
-2.  Run Gemini CLI and send prompts.
-3.  View logs, metrics, and traces in the Google Cloud Console. See
-    [View Google Cloud telemetry](#view-google-cloud-telemetry) for details.
-
-### View Google Cloud telemetry
-
-After you enable telemetry and run Gemini CLI, you can view your data in the
-Google Cloud Console.
-
-- **Logs:** [Logs Explorer](https://console.cloud.google.com/logs/)
-- **Metrics:**
-  [Metrics Explorer](https://console.cloud.google.com/monitoring/metrics-explorer)
-- **Traces:** [Trace Explorer](https://console.cloud.google.com/traces/list)
-
-For detailed information on how to use these tools, see the following official
-Google Cloud documentation:
-
-- [View and analyze logs with Logs Explorer](https://cloud.google.com/logging/docs/view/logs-explorer-interface)
-- [Create charts with Metrics Explorer](https://cloud.google.com/monitoring/charts/metrics-explorer)
-- [Find and explore traces](https://cloud.google.com/trace/docs/finding-traces)
-
-#### Monitoring dashboards
-
-Gemini CLI provides a pre-configured
-[Google Cloud Monitoring](https://cloud.google.com/monitoring) dashboard to
-visualize your telemetry.
-
-Find this dashboard under **Google Cloud Monitoring Dashboard Templates** as
-"**Gemini CLI Monitoring**".
-
-![Gemini CLI Monitoring Dashboard Overview](/docs/assets/monitoring-dashboard-overview.png)
-
-![Gemini CLI Monitoring Dashboard Metrics](/docs/assets/monitoring-dashboard-metrics.png)
-
-![Gemini CLI Monitoring Dashboard Logs](/docs/assets/monitoring-dashboard-logs.png)
-
-To learn more, see
-[Instant insights: Gemini CLI’s pre-configured monitoring dashboards](https://cloud.google.com/blog/topics/developers-practitioners/instant-insights-gemini-clis-new-pre-configured-monitoring-dashboards/).
 
 ## Local telemetry
 
@@ -252,7 +101,7 @@ a "surface" tag in the parenthetical metadata.
 
 You can provide a custom identifier for your own scripts or automation by
 setting the `GEMINI_CLI_SURFACE` environment variable. This is useful for
-tracking specific internal tools or distribution channels in your GCP logs.
+tracking specific internal tools or distribution channels in your telemetry.
 
 **macOS/Linux**
 
@@ -274,8 +123,8 @@ When set, the value appears at the end of the `User-Agent` parenthetical:
 This section describes the structure of logs, metrics, and traces generated by
 Gemini CLI.
 
-Gemini CLI includes `session.id`, `installation.id`, `active_approval_mode`, and
-`user.email` (when authenticated) as common attributes on all data.
+Gemini CLI includes `session.id`, `installation.id`, and `active_approval_mode`
+as common attributes on all data.
 
 ### Logs
 

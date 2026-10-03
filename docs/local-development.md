@@ -14,7 +14,7 @@ issues. They are captured automatically when you enable telemetry.
 
 ### View traces
 
-You can view traces using Genkit Developer UI, Jaeger, or Google Cloud.
+You can view traces using Genkit Developer UI or Jaeger.
 
 #### Use Genkit
 
@@ -74,60 +74,6 @@ You can view traces in the Jaeger UI for local development.
 
     After running your command, open the Jaeger UI link in your browser to view
     the traces.
-
-#### Use Google Cloud
-
-You can use an OpenTelemetry collector to forward telemetry data to Google Cloud
-Trace for custom processing or routing.
-
-<!-- prettier-ignore -->
-> [!WARNING]
-> Ensure you complete the
-> [Google Cloud telemetry prerequisites](./cli/telemetry.md#prerequisites)
-> (Project ID, authentication, IAM roles, and APIs) before using this method.
-
-1.  **Configure `.gemini/settings.json`:**
-
-    ```json
-    {
-      "telemetry": {
-        "enabled": true,
-        "target": "gcp",
-        "useCollector": true
-      }
-    }
-    ```
-
-2.  **Start the telemetry collector:**
-
-    Run the following command to start a local OTel collector that forwards to
-    Google Cloud:
-
-    ```bash
-    npm run telemetry -- --target=gcp
-    ```
-
-    The script outputs links to view traces, metrics, and logs in the Google
-    Cloud Console.
-
-    - **Collector logs:** `~/.gemini/tmp/<projectHash>/otel/collector-gcp.log`
-
-3.  **Run Gemini CLI:**
-
-    In a separate terminal, run your Gemini CLI command:
-
-    ```bash
-    gemini
-    ```
-
-4.  **View logs, metrics, and traces:**
-
-    After sending prompts, view your data in the Google Cloud Console. See the
-    [telemetry documentation](./cli/telemetry.md#view-google-cloud-telemetry)
-    for links to Logs, Metrics, and Trace explorers.
-
-For more detailed information on telemetry, see the
-[telemetry documentation](./cli/telemetry.md).
 
 ### Instrument code with traces
 

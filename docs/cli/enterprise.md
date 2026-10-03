@@ -491,7 +491,7 @@ events. For more information, see the [telemetry documentation](./telemetry.md).
 {
   "telemetry": {
     "enabled": true,
-    "target": "gcp",
+    "target": "local",
     "logPrompts": false
   }
 }
@@ -587,7 +587,7 @@ CLI.
   },
   "telemetry": {
     "enabled": true,
-    "target": "gcp",
+    "target": "local",
     "otlpEndpoint": "https://telemetry-prod.example.com:4317",
     "logPrompts": false
   },

@@ -2545,8 +2545,8 @@ see [Telemetry](../cli/telemetry.md).
   - **`enabled`** (boolean): Whether or not telemetry is enabled.
   - **`traces`** (boolean): Whether detailed traces with large attributes (like
     tool outputs and file reads) are captured. Defaults to `false`.
-  - **`target`** (string): The destination for collected telemetry. Supported
-    values are `local` and `gcp`.
+  - **`target`** (string): The destination for collected telemetry. The
+    supported value is `local`.
   - **`otlpEndpoint`** (string): The endpoint for the OTLP Exporter.
   - **`otlpProtocol`** (string): The protocol for the OTLP Exporter (`grpc` or
     `http`).
@@ -2745,10 +2745,6 @@ the `advanced.excludedEnvVars` setting in your `settings.json` file.
   - Example: `export GOOGLE_VERTEX_BASE_URL="https://my-vertex-proxy.com"`
     (Windows PowerShell:
     `$env:GOOGLE_VERTEX_BASE_URL="https://my-vertex-proxy.com"`)
-- **`OTLP_GOOGLE_CLOUD_PROJECT`**:
-  - Your Google Cloud Project ID for Telemetry in Google Cloud
-  - Example: `export OTLP_GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"` (Windows
-    PowerShell: `$env:OTLP_GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"`).
 - **`GEMINI_TELEMETRY_ENABLED`**:
   - Set to `true` or `1` to enable telemetry. Any other value is treated as
     disabling it.
@@ -2758,7 +2754,7 @@ the `advanced.excludedEnvVars` setting in your `settings.json` file.
     other value is treated as disabling it.
   - Overrides the `telemetry.traces` setting.
 - **`GEMINI_TELEMETRY_TARGET`**:
-  - Sets the telemetry target (`local` or `gcp`).
+  - Sets the telemetry target (`local`).
   - Overrides the `telemetry.target` setting.
 - **`GEMINI_TELEMETRY_OTLP_ENDPOINT`**:
   - Sets the OTLP endpoint for telemetry.
