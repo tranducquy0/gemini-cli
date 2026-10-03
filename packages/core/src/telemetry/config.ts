@@ -28,9 +28,6 @@ export function parseTelemetryTargetValue(
   if (value === TelemetryTarget.LOCAL || value === 'local') {
     return TelemetryTarget.LOCAL;
   }
-  if (value === TelemetryTarget.GCP || value === 'gcp') {
-    return TelemetryTarget.GCP;
-  }
   return undefined;
 }
 
@@ -71,9 +68,7 @@ export async function resolveTelemetrySettings(options: {
   const target = parseTelemetryTargetValue(rawTarget);
   if (rawTarget !== undefined && target === undefined) {
     throw new FatalConfigError(
-      `Invalid telemetry target: ${String(
-        rawTarget,
-      )}. Valid values are: local, gcp`,
+      `Invalid telemetry target: ${String(rawTarget)}. Valid values are: local`,
     );
   }
 

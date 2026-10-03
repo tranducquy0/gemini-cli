@@ -39,18 +39,11 @@ import type { JWTInput } from 'google-auth-library';
 import type { Config } from '../config/config.js';
 import { SERVICE_NAME } from './constants.js';
 import { initializeMetrics } from './metrics.js';
-import { ClearcutLogger } from './clearcut-logger/clearcut-logger.js';
 import {
   FileLogExporter,
   FileMetricExporter,
   FileSpanExporter,
 } from './file-exporters.js';
-import {
-  GcpTraceExporter,
-  GcpMetricExporter,
-  GcpLogExporter,
-} from './gcp-exporters.js';
-import { TelemetryTarget } from './index.js';
 import { debugLogger } from '../utils/debugLogger.js';
 import {
   startGlobalMemoryMonitoring,
@@ -239,46 +232,23 @@ export async function initializeTelemetry(
 
   const otlpEndpoint = config.getTelemetryOtlpEndpoint();
   const otlpProtocol = config.getTelemetryOtlpProtocol();
-  const telemetryTarget = config.getTelemetryTarget();
-  const useCollector = config.getTelemetryUseCollector();
 
   const parsedEndpoint = parseOtlpEndpoint(otlpEndpoint, otlpProtocol);
   const telemetryOutfile = config.getTelemetryOutfile();
   const useOtlp = !!parsedEndpoint && !telemetryOutfile;
 
-  const gcpProjectId =
-    process.env['OTLP_GOOGLE_CLOUD_PROJECT'] ||
-    process.env['GOOGLE_CLOUD_PROJECT'];
-  const useDirectGcpExport =
-    telemetryTarget === TelemetryTarget.GCP && !useCollector;
-
   let spanExporter:
     | OTLPTraceExporter
     | OTLPTraceExporterHttp
-    | GcpTraceExporter
     | FileSpanExporter
     | ConsoleSpanExporter;
   let logExporter:
     | OTLPLogExporter
     | OTLPLogExporterHttp
-    | GcpLogExporter
     | FileLogExporter
     | ConsoleLogRecordExporter;
 
-  if (useDirectGcpExport) {
-    debugLogger.log(
-      'Creating GCP exporters with projectId:',
-      gcpProjectId,
-      'using',
-      credentials ? 'provided credentials' : 'ADC',
-    );
-    spanExporter = new GcpTraceExporter(gcpProjectId, credentials);
-    logExporter = new GcpLogExporter(gcpProjectId, credentials);
-    metricReader = new PeriodicExportingMetricReader({
-      exporter: new GcpMetricExporter(gcpProjectId, credentials),
-      exportIntervalMillis: 30000,
-    });
-  } else if (useOtlp) {
+  if (useOtlp) {
     if (otlpProtocol === 'http') {
       const buildUrl = (path: string) => {
         const url = new URL(parsedEndpoint);
@@ -421,7 +391,6 @@ export async function shutdownTelemetry(
     return;
   }
   try {
-    ClearcutLogger.getInstance()?.shutdown();
     await sdk.shutdown();
     if (config.getDebugMode() && fromProcessExit) {
       debugLogger.log('OpenTelemetry SDK shut down successfully.');

@@ -45,7 +45,7 @@ if (!telemetrySettings) {
 }
 
 let target = telemetrySettings?.target || 'local';
-const allowedTargets = ['local', 'gcp', 'genkit'];
+const allowedTargets = ['local', 'genkit'];
 
 const targetArg = process.argv.find((arg) => arg.startsWith('--target='));
 if (targetArg) {
@@ -68,7 +68,6 @@ if (targetArg) {
 }
 
 const targetScripts = {
-  gcp: 'telemetry_gcp.js',
   local: 'local_telemetry.js',
   genkit: 'telemetry_genkit.js',
 };

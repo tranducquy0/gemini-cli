@@ -121,15 +121,6 @@ vi.mock('@google/gemini-cli-core', async (importOriginal) => {
       })),
       flush: vi.fn(),
     },
-    ClearcutLogger: {
-      getInstance: vi.fn(() => ({
-        logStartSessionEvent: vi.fn().mockResolvedValue(undefined),
-        logEndSessionEvent: vi.fn().mockResolvedValue(undefined),
-        logUserPrompt: vi.fn(),
-        addDefaultFields: vi.fn((data) => data),
-      })),
-      clearInstance: vi.fn(),
-    },
     coreEvents: {
       // eslint-disable-next-line @typescript-eslint/no-misused-spread
       ...actual.coreEvents,

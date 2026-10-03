@@ -193,12 +193,6 @@ vi.mock('../utils/filesearch/crawler.js', () => ({
   crawl: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../telemetry/clearcut-logger/clearcut-logger.js', () => ({
-  ClearcutLogger: class {
-    log() {}
-  },
-}));
-
 vi.mock('../utils/promptIdContext.js', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../utils/promptIdContext.js')>();

@@ -1465,7 +1465,7 @@ name = "yolo-checker"
           vi.clearAllMocks();
         });
 
-        it(`should log an ${isUpdate ? 'update' : 'install'} event to clearcut on success`, async () => {
+        it(`should log an ${isUpdate ? 'update' : 'install'} event on success`, async () => {
           await extensionManager.installOrUpdateExtension(
             { source: sourceExtDir, type: 'local' },
             isUpdate

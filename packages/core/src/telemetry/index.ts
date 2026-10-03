@@ -5,7 +5,6 @@
  */
 
 export enum TelemetryTarget {
-  GCP = 'gcp',
   LOCAL = 'local',
 }
 
@@ -24,11 +23,6 @@ export {
   parseBooleanEnvFlag,
   parseTelemetryTargetValue,
 } from './config.js';
-export {
-  GcpTraceExporter,
-  GcpMetricExporter,
-  GcpLogExporter,
-} from './gcp-exporters.js';
 export {
   logCliConfiguration,
   logUserPrompt,

@@ -47,7 +47,6 @@ import type {
   ModelConfigKey,
   ResolvedModelConfig,
 } from '../services/modelConfigService.js';
-import { ClearcutLogger } from '../telemetry/clearcut-logger/clearcut-logger.js';
 import * as policyCatalog from '../availability/policyCatalog.js';
 import { LlmRole, LoopType } from '../telemetry/types.js';
 import { partToString } from '../utils/partUtils.js';
@@ -170,7 +169,6 @@ describe('Gemini Client (client.ts)', () => {
   let mockRouterService: { route: Mock };
   beforeEach(async () => {
     vi.resetAllMocks();
-    ClearcutLogger.clearInstance();
     vi.mocked(uiTelemetryService.setLastPromptTokenCount).mockClear();
 
     mockGenerateContentFn = vi.fn().mockResolvedValue({
