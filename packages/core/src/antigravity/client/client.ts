@@ -25,6 +25,8 @@ export function antigravityHeaders(token: string): Record<string, string> {
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
+    "User-Agent": antigravityEnv("USER_AGENT") || "antigravity/cli/1.2.4 (aidev_client; os_type=linux; arch=amd64; auth_method=consumer)",
+    "X-Goog-Api-Client": "antigravity-cli",
   };
 }
 
