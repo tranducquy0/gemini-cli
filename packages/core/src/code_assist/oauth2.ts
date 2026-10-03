@@ -89,6 +89,11 @@ const OAUTH_SCOPE = [
   'https://www.googleapis.com/auth/cloud-platform',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  // Antigravity uses the same Gemini CLI OAuth client and requires these
+  // first-party scopes for model discovery and experiments/configuration.
+  'https://www.googleapis.com/auth/aicode',
+  'https://www.googleapis.com/auth/cclog',
+  'https://www.googleapis.com/auth/experimentsandconfigs',
 ];
 
 const HTTP_REDIRECT = 301;

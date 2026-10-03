@@ -1,15 +1,47 @@
-import { OAuth2Client } from 'google-auth-library';
 import { debugLogger } from "../../utils/debugLogger.js";
-import { antigravityEnv } from "../utils/util.js";
+import { AuthType } from "../../core/contentGenerator.js";
+import type { Config } from "../../config/config.js";
+import { getOauthClient } from "../../code_assist/oauth2.js";
+import { loadCodeAssist } from "../client/client.js";
 
-const OAUTH_CLIENT_ID = '681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com';
-const OAUTH_CLIENT_SECRET = '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';
+export type AntigravityCredentials = {
+  token: string;
+  projectId: string;
+};
 
-export async function loginAntigravity() {
-  debugLogger.log("Using Gemini CLI native OAuth flow for Antigravity");
-  const client = new OAuth2Client({
-    clientId: OAUTH_CLIENT_ID,
-    clientSecret: OAUTH_CLIENT_SECRET,
-  });
-  // ... refactor needed here to connect to Gemini CLI oauth2.ts ...
+/**
+ * Sign in to Antigravity using the CLI's first-party Google OAuth flow.
+ *
+ * Reusing getOauthClient is intentional: it provides the browser/user-code
+ * flow, refresh-token persistence, proxy support, and logout integration used
+ * by the rest of Gemini CLI.
+ */
+export async function loginAntigravity(
+  config: Config,
+): Promise<AntigravityCredentials> {
+  debugLogger.log("Signing in to Antigravity with Google OAuth");
+
+  const oauthClient = await getOauthClient(AuthType.LOGIN_WITH_GOOGLE, config);
+  const accessToken = (await oauthClient.getAccessToken()).token;
+  if (!accessToken) {
+    throw new Error("Google OAuth did not return an access token.");
+  }
+
+  const projectId = await loadCodeAssist(accessToken);
+  if (!projectId) {
+    throw new Error(
+      "Google OAuth succeeded, but no Antigravity project was returned.",
+    );
+  }
+
+  return { token: accessToken, projectId };
+}
+
+/**
+ * Returns the credential format consumed by the Antigravity HTTP client.
+ * The access token is obtained through Gemini CLI's cached OAuth client, so
+ * expired tokens are refreshed transparently.
+ */
+export async function getAntigravityApiKey(config: Config): Promise<string> {
+  return JSON.stringify(await loginAntigravity(config));
 }

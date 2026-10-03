@@ -13,4 +13,3 @@ export function asString(value: unknown): string | undefined {
 export function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-EOF
