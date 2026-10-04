@@ -17,6 +17,9 @@ import type { Config } from '../config/config.js';
 import { LoggingContentGenerator } from '../core/loggingContentGenerator.js';
 import { ModelMappingContentGenerator } from '../core/modelMappingContentGenerator.js';
 import { UserTierId } from './types.js';
+import { getAntigravityOauthClient } from '../antigravity/auth/oauth.js';
+import { setupAntigravityUser } from '../antigravity/auth/setup.js';
+import { createAntigravityServer } from '../antigravity/server.js';
 
 // Mock dependencies
 vi.mock('./oauth2.js');
@@ -24,6 +27,9 @@ vi.mock('./setup.js');
 vi.mock('./server.js');
 vi.mock('../core/loggingContentGenerator.js');
 vi.mock('../core/modelMappingContentGenerator.js');
+vi.mock('../antigravity/auth/oauth.js');
+vi.mock('../antigravity/auth/setup.js');
+vi.mock('../antigravity/server.js');
 
 const mockedGetOauthClient = vi.mocked(getOauthClient);
 const mockedSetupUser = vi.mocked(setupUser);
@@ -32,6 +38,9 @@ const MockedLoggingContentGenerator = vi.mocked(LoggingContentGenerator);
 const MockedModelMappingContentGenerator = vi.mocked(
   ModelMappingContentGenerator,
 );
+const mockedGetAntigravityOauthClient = vi.mocked(getAntigravityOauthClient);
+const mockedSetupAntigravityUser = vi.mocked(setupAntigravityUser);
+const mockedCreateAntigravityServer = vi.mocked(createAntigravityServer);
 
 describe('codeAssist', () => {
   beforeEach(() => {
@@ -52,9 +61,14 @@ describe('codeAssist', () => {
       hasOnboardedPreviously: false,
     };
 
-    it('should create a server for LOGIN_WITH_GOOGLE', async () => {
-      mockedGetOauthClient.mockResolvedValue(mockAuthClient as never);
-      mockedSetupUser.mockResolvedValue(mockUserData);
+    it('should create an Antigravity server for LOGIN_WITH_GOOGLE', async () => {
+      mockedGetAntigravityOauthClient.mockResolvedValue(
+        mockAuthClient as never,
+      );
+      mockedSetupAntigravityUser.mockResolvedValue(mockUserData);
+      mockedCreateAntigravityServer.mockReturnValue(
+        new MockedCodeAssistServer(mockAuthClient as never, 'test-project', {}),
+      );
 
       const generator = await createCodeAssistContentGenerator(
         httpOptions,
@@ -63,26 +77,18 @@ describe('codeAssist', () => {
         'session-123',
       );
 
-      expect(getOauthClient).toHaveBeenCalledWith(
-        AuthType.LOGIN_WITH_GOOGLE,
-        mockConfig,
-      );
-      expect(setupUser).toHaveBeenCalledWith(
+      expect(getAntigravityOauthClient).toHaveBeenCalledWith(mockConfig);
+      expect(setupAntigravityUser).toHaveBeenCalledWith(mockConfig);
+      expect(mockedCreateAntigravityServer).toHaveBeenCalledWith(
         mockAuthClient,
-        mockConfig,
-        httpOptions,
-      );
-      expect(MockedCodeAssistServer).toHaveBeenCalledWith(
-        mockAuthClient,
-        'test-project',
+        mockUserData,
         httpOptions,
         'session-123',
-        'free-tier',
-        'free-tier-name',
-        undefined,
         mockConfig,
       );
       expect(generator).toBeInstanceOf(MockedCodeAssistServer);
+      expect(getOauthClient).not.toHaveBeenCalled();
+      expect(setupUser).not.toHaveBeenCalled();
     });
 
     it('should create a server for COMPUTE_ADC', async () => {

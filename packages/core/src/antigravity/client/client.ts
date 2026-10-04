@@ -1,33 +1,80 @@
-import { debugLogger } from "../../utils/debugLogger.js";
-import { antigravityEnv } from "../utils/util.js";
-import { isRecord, asString } from "../utils/util.js";
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-const fetch = globalThis.fetch;
+import { debugLogger } from '../../utils/debugLogger.js';
+import { antigravityEnv } from '../utils/util.js';
+import { isRecord, asString } from '../utils/util.js';
+
 const DISCOVERY_TIMEOUT_MS = 8_000;
 
-export const DEFAULT_ENDPOINT = "https://daily-cloudcode-pa.googleapis.com";
-export const ENDPOINT_FALLBACKS = [
-  DEFAULT_ENDPOINT,
-  "https://daily-cloudcode-pa.sandbox.googleapis.com",
-  "https://cloudcode-pa.googleapis.com",
-];
+export const DEFAULT_ENDPOINT = 'https://daily-cloudcode-pa.googleapis.com';
+export const PROD_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
+export const ENDPOINT_FALLBACKS = [DEFAULT_ENDPOINT, PROD_ENDPOINT];
 
-export async function antigravityFetch(url: string, options: RequestInit) {
-  return fetch(url, options);
-}
+export const API_VERSION = 'v1internal';
 
+export const ANTIGRAVITY_VERSION = '1.15.8';
+
+/**
+ * Endpoint override, e.g. for a local Antigravity gateway.
+ *
+ * The variables are namespaced on purpose: an unprefixed `BASE_URL`/`USER_AGENT`
+ * is set by unrelated tooling and would silently redirect Antigravity traffic.
+ * Nothing is required for Antigravity to work; these are optional overrides.
+ */
+export const BASE_URL_ENV_VAR = 'ANTIGRAVITY_BASE_URL';
+export const USER_AGENT_ENV_VAR = 'ANTIGRAVITY_USER_AGENT';
+
+/**
+ * Consumers (Code Assist for individuals, Google AI Pro/Ultra) are served
+ * exclusively by the `daily-cloudcode-pa` cluster; the `cloudcode-pa` cluster
+ * only serves licensed/enterprise accounts. We keep it as a last-resort
+ * fallback because workspace accounts are bound to it instead.
+ */
 export function endpointCandidates(): string[] {
-  const explicit = antigravityEnv("BASE_URL")?.trim();
+  const explicit = antigravityEnv(BASE_URL_ENV_VAR)?.trim();
   return explicit ? [explicit] : ENDPOINT_FALLBACKS;
 }
 
-export function antigravityHeaders(token: string): Record<string, string> {
+export function antigravityUserAgent(): string {
+  const os =
+    process.platform === 'win32'
+      ? 'windows'
+      : process.platform === 'darwin'
+        ? 'darwin'
+        : 'linux';
+  const arch =
+    process.arch === 'x64'
+      ? 'amd64'
+      : process.arch === 'arm64'
+        ? 'arm64'
+        : process.arch;
+  return (
+    antigravityEnv(USER_AGENT_ENV_VAR) ||
+    `antigravity/${ANTIGRAVITY_VERSION} ${os}/${arch}`
+  );
+}
+
+export function antigravityHeaders(token?: string): Record<string, string> {
   return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-    "User-Agent": antigravityEnv("USER_AGENT") || "antigravity/cli/1.2.4 (aidev_client; os_type=linux; arch=amd64; auth_method=consumer)",
-    "X-Goog-Api-Client": "antigravity-cli",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    'Content-Type': 'application/json',
+    'User-Agent': antigravityUserAgent(),
+    'X-Goog-Api-Client': 'antigravity-cli',
   };
+}
+
+export function antigravityMethodUrl(endpoint: string, method: string): string {
+  return `${endpoint}/${API_VERSION}:${method}`;
+}
+
+export async function antigravityFetch(url: string, options: RequestInit) {
+  // Resolved per call so tests (and proxies installed after startup) can swap
+  // the global fetch implementation.
+  return globalThis.fetch(url, options);
 }
 
 export type AntigravityApiKey = {
@@ -37,41 +84,83 @@ export type AntigravityApiKey = {
 
 export function parseApiKey(apiKeyRaw: string | undefined): AntigravityApiKey {
   if (!apiKeyRaw) {
-    throw new Error("No Antigravity OAuth credentials. Run /login antigravity.");
+    throw new Error(
+      'No Antigravity OAuth credentials. Run /login antigravity.',
+    );
   }
 
   try {
     const parsed: unknown = JSON.parse(apiKeyRaw);
-    if (!isRecord(parsed)) throw new Error("credentials must be a JSON object");
-    const token = asString(parsed["token"]);
-    const projectId = asString(parsed["projectId"]);
-    if (!token || !projectId) throw new Error("missing token or projectId");
+    if (!isRecord(parsed)) throw new Error('credentials must be a JSON object');
+    const token = asString(parsed['token']);
+    const projectId = asString(parsed['projectId']);
+    if (!token || !projectId) throw new Error('missing token or projectId');
     return { token, projectId };
   } catch (error) {
-    throw new Error(`Invalid Antigravity credentials. Run /login antigravity.`, {
-      cause: error,
-    });
+    throw new Error(
+      `Invalid Antigravity credentials. Run /login antigravity.`,
+      {
+        cause: error,
+      },
+    );
   }
+}
+
+/**
+ * The subset of `v1internal:loadCodeAssist` that Gemini CLI cares about: the
+ * project every request is billed/attributed to plus the user's plan.
+ */
+export type AntigravityAccount = {
+  projectId?: string;
+  tierId?: string;
+  tierName?: string;
+  paidTierId?: string;
+  paidTierName?: string;
+};
+
+export function extractAccount(data: unknown): AntigravityAccount | undefined {
+  if (!isRecord(data)) return undefined;
+
+  const currentTier = isRecord(data['currentTier'])
+    ? data['currentTier']
+    : undefined;
+  const paidTier = isRecord(data['paidTier']) ? data['paidTier'] : undefined;
+
+  const account: AntigravityAccount = {};
+  const projectId = extractProjectId(data);
+  if (projectId) account.projectId = projectId;
+
+  const tierId = asString(currentTier?.['id']);
+  if (tierId) account.tierId = tierId;
+  const tierName = asString(currentTier?.['name']);
+  if (tierName) account.tierName = tierName;
+
+  const paidTierId = asString(paidTier?.['id']);
+  if (paidTierId) account.paidTierId = paidTierId;
+  const paidTierName = asString(paidTier?.['name']);
+  if (paidTierName) account.paidTierName = paidTierName;
+
+  return Object.keys(account).length > 0 ? account : undefined;
 }
 
 export function extractProjectId(data: unknown): string | undefined {
   if (!isRecord(data)) return undefined;
 
   const direct =
-    data["antigravityProjectId"] ??
-    data["projectId"] ??
-    data["backendProjectId"] ??
-    data["userDefinedCloudaicompanionProject"] ??
-    data["cloudaicompanionProject"] ??
-    data["project"];
+    data['antigravityProjectId'] ??
+    data['projectId'] ??
+    data['backendProjectId'] ??
+    data['userDefinedCloudaicompanionProject'] ??
+    data['cloudaicompanionProject'] ??
+    data['project'];
   const directId = asString(direct);
   if (directId) return directId;
   if (isRecord(direct)) {
-    const nestedId = asString(direct["id"]);
+    const nestedId = asString(direct['id']);
     if (nestedId) return nestedId;
   }
 
-  for (const key of ["projects", "projectIds", "cloudaicompanionProjects"]) {
+  for (const key of ['projects', 'projectIds', 'cloudaicompanionProjects']) {
     const value = data[key];
     if (!Array.isArray(value)) continue;
     for (const item of value) {
@@ -88,9 +177,9 @@ async function listCloudAICompanionProjects(
   for (const endpoint of endpointCandidates()) {
     try {
       const res = await antigravityFetch(
-        `${endpoint}/v1internal:listCloudAICompanionProjects`,
+        antigravityMethodUrl(endpoint, 'listCloudAICompanionProjects'),
         {
-          method: "POST",
+          method: 'POST',
           headers: antigravityHeaders(token),
           body: JSON.stringify({}),
           signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
@@ -104,14 +193,21 @@ async function listCloudAICompanionProjects(
   return undefined;
 }
 
-export async function fetchAvailableModelsCatalog(token: string, projectId: string) {
+export async function fetchAvailableModelsCatalog(
+  token: string,
+  projectId: string,
+) {
   for (const endpoint of endpointCandidates()) {
     try {
-      const res = await antigravityFetch(`${endpoint}/v1internal:fetchAvailableModels`, {
-        method: "POST",
-        headers: antigravityHeaders(token),
-        body: JSON.stringify({ project: projectId }),
-      });
+      const res = await antigravityFetch(
+        antigravityMethodUrl(endpoint, 'fetchAvailableModels'),
+        {
+          method: 'POST',
+          headers: antigravityHeaders(token),
+          body: JSON.stringify({ project: projectId }),
+          signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+        },
+      );
       if (!res.ok) continue;
       const data = await res.json();
       return { endpoint, status: res.status, data };
@@ -119,23 +215,48 @@ export async function fetchAvailableModelsCatalog(token: string, projectId: stri
       debugLogger.error(`Failed to fetch models from ${endpoint}`, error);
     }
   }
-  throw new Error("Failed to fetch models catalog from all endpoints");
+  throw new Error('Failed to fetch models catalog from all endpoints');
 }
 
-export async function loadCodeAssist(token: string) {
+/**
+ * Resolves the Antigravity account (project + plan) for an access token.
+ *
+ * Antigravity provisions the consumer project on first use, so `loadCodeAssist`
+ * normally returns it right away; `listCloudAICompanionProjects` is only a
+ * fallback for responses that omit it.
+ */
+export async function fetchAntigravityAccount(
+  token: string,
+): Promise<AntigravityAccount | undefined> {
+  let lastError: unknown;
   for (const endpoint of endpointCandidates()) {
     try {
-      const res = await antigravityFetch(`${endpoint}/v1internal:loadCodeAssist`, {
-        method: "POST",
-        headers: antigravityHeaders(token),
-        body: JSON.stringify({ metadata: { ideType: "ANTIGRAVITY" } }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      return extractProjectId(data) ?? (await listCloudAICompanionProjects(token));
+      const res = await antigravityFetch(
+        antigravityMethodUrl(endpoint, 'loadCodeAssist'),
+        {
+          method: 'POST',
+          headers: antigravityHeaders(token),
+          body: JSON.stringify({ metadata: { ideType: 'ANTIGRAVITY' } }),
+          signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+        },
+      );
+      if (!res.ok) {
+        lastError = new Error(`${endpoint} responded with HTTP ${res.status}`);
+        continue;
+      }
+      const account = extractAccount(await res.json());
+      if (account?.projectId) return account;
+      const projectId = await listCloudAICompanionProjects(token);
+      return projectId ? { ...account, projectId } : account;
     } catch (error) {
+      lastError = error;
       debugLogger.error(`Failed to load code assist from ${endpoint}`, error);
     }
   }
+  debugLogger.warn('Failed to resolve Antigravity account', lastError);
   return undefined;
+}
+
+export async function loadCodeAssist(token: string) {
+  return (await fetchAntigravityAccount(token))?.projectId;
 }

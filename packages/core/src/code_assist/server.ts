@@ -70,6 +70,25 @@ export interface HttpOptions {
   headers?: Record<string, string>;
 }
 
+/**
+ * Describes the first-party `v1internal` backend a server talks to.
+ *
+ * Gemini Code Assist and Antigravity expose the same protocol, so a single
+ * client implementation serves both; only the origin, the client fingerprint
+ * headers, and a few envelope fields differ.
+ */
+export interface V1InternalBackend {
+  /** Origin including the API version, e.g. `https://host/v1internal`. */
+  baseUrl: string;
+  /** Headers identifying the calling client, e.g. `User-Agent`. */
+  headers?: Record<string, string>;
+  /**
+   * Adds backend-specific fields to the generateContent envelope, e.g.
+   * Antigravity's `requestType`/`userAgent`/`requestId`.
+   */
+  decorateGenerateRequest?: (request: object) => object;
+}
+
 export const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
 export const CODE_ASSIST_API_VERSION = 'v1internal';
 const GENERATE_CONTENT_RETRY_DELAY_IN_MILLISECONDS = 1000;
@@ -84,6 +103,8 @@ export class CodeAssistServer implements ContentGenerator {
     readonly userTierName?: string,
     readonly paidTier?: GeminiUserTier,
     readonly config?: Config,
+    /** Backend to talk to; defaults to Gemini Code Assist. */
+    readonly backend?: V1InternalBackend,
   ) {}
 
   getEffectiveSessionId(): string | undefined {
@@ -117,13 +138,7 @@ export class CodeAssistServer implements ContentGenerator {
     const responses =
       await this.requestStreamingPost<CaGenerateContentResponse>(
         'streamGenerateContent',
-        toGenerateContentRequest(
-          req,
-          userPromptId,
-          this.projectId,
-          this.getEffectiveSessionId(),
-          enabledCreditTypes,
-        ),
+        this.toGenerateRequest(req, userPromptId, enabledCreditTypes),
         req.config?.abortSignal,
       );
 
@@ -204,13 +219,7 @@ export class CodeAssistServer implements ContentGenerator {
     const start = Date.now();
     const response = await this.requestPost<CaGenerateContentResponse>(
       'generateContent',
-      toGenerateContentRequest(
-        req,
-        userPromptId,
-        this.projectId,
-        this.getEffectiveSessionId(),
-        undefined,
-      ),
+      this.toGenerateRequest(req, userPromptId),
       req.config?.abortSignal,
       GENERATE_CONTENT_RETRY_DELAY_IN_MILLISECONDS,
     );
@@ -421,10 +430,7 @@ export class CodeAssistServer implements ContentGenerator {
     const res = await this.client.request<T>({
       url: this.getMethodUrl(method),
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.httpOptions.headers,
-      },
+      headers: this.getRequestHeaders(),
       responseType: 'json',
       body: JSON.stringify(req),
       signal,
@@ -449,10 +455,7 @@ export class CodeAssistServer implements ContentGenerator {
     const res = await this.client.request<T>({
       url,
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.httpOptions.headers,
-      },
+      headers: this.getRequestHeaders(),
       responseType: 'json',
       signal,
     });
@@ -478,10 +481,7 @@ export class CodeAssistServer implements ContentGenerator {
       params: {
         alt: 'sse',
       },
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.httpOptions.headers,
-      },
+      headers: this.getRequestHeaders(),
       responseType: 'stream',
       body: JSON.stringify(req),
       signal,
@@ -521,12 +521,48 @@ export class CodeAssistServer implements ContentGenerator {
     })(this);
   }
 
-  private getBaseUrl(): string {
+  protected getBaseUrl(): string {
+    if (this.backend) {
+      return this.backend.baseUrl;
+    }
     const endpoint =
       process.env['CODE_ASSIST_ENDPOINT'] ?? CODE_ASSIST_ENDPOINT;
     const version =
       process.env['CODE_ASSIST_API_VERSION'] || CODE_ASSIST_API_VERSION;
     return `${endpoint}/${version}`;
+  }
+
+  /**
+   * Headers sent with every request: the backend's client fingerprint, then
+   * caller supplied headers, which always win.
+   */
+  private getRequestHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      ...this.backend?.headers,
+      ...this.httpOptions.headers,
+    };
+  }
+
+  /**
+   * Builds the `v1internal` request envelope, letting the configured backend add
+   * its own fields.
+   */
+  protected toGenerateRequest(
+    req: GenerateContentParameters,
+    userPromptId: string,
+    enabledCreditTypes?: string[],
+  ): object {
+    const request = toGenerateContentRequest(
+      req,
+      userPromptId,
+      this.projectId,
+      this.getEffectiveSessionId(),
+      enabledCreditTypes,
+    );
+    return this.backend?.decorateGenerateRequest
+      ? this.backend.decorateGenerateRequest(request)
+      : request;
   }
 
   getMethodUrl(method: string): string {

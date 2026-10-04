@@ -51,12 +51,29 @@ import { getConsentForOauth } from '../utils/authConsent.js';
 
 export const authEvents = new EventEmitter();
 
-async function triggerPostAuthCallbacks(tokens: Credentials) {
+/**
+ * Identifies the Google OAuth client (and its scopes) used for a login flow.
+ *
+ * Gemini CLI and Antigravity are separate first-party clients: they use
+ * different OAuth client IDs and, therefore, different scope grants. Every
+ * token operation must be performed with the profile that issued the cached
+ * refresh token, otherwise Google rejects the refresh.
+ */
+export interface OAuthClientProfile {
+  clientId: string;
+  clientSecret: string;
+  scopes: string[];
+}
+
+async function triggerPostAuthCallbacks(
+  tokens: Credentials,
+  profile: OAuthClientProfile,
+) {
   // Construct a JWTInput object to pass to callbacks, as this is the
   // type expected by the downstream Google Cloud client libraries.
   const jwtInput: JWTInput = {
-    client_id: OAUTH_CLIENT_ID,
-    client_secret: OAUTH_CLIENT_SECRET,
+    client_id: profile.clientId,
+    client_secret: profile.clientSecret,
     refresh_token: tokens.refresh_token ?? undefined, // Ensure null is not passed
     type: 'authorized_user',
     client_email: userAccountManager.getCachedGoogleAccount() ?? undefined,
@@ -93,6 +110,18 @@ const OAUTH_SCOPE = [
   'https://www.googleapis.com/auth/experimentsandconfigs',
 ];
 
+/**
+ * The legacy Gemini CLI / Gemini Code Assist OAuth client.
+ *
+ * Kept for ADC and for Code Assist Standard/Enterprise workspaces, which are
+ * the only Gemini Code Assist deployments still serving requests.
+ */
+export const GEMINI_OAUTH_PROFILE: OAuthClientProfile = {
+  clientId: OAUTH_CLIENT_ID,
+  clientSecret: OAUTH_CLIENT_SECRET,
+  scopes: OAUTH_SCOPE,
+};
+
 const HTTP_REDIRECT = 301;
 const SIGN_IN_SUCCESS_URL =
   'https://developers.google.com/gemini-code-assist/auth_success_gemini';
@@ -109,7 +138,14 @@ export interface OauthWebLogin {
   loginCompletePromise: Promise<void>;
 }
 
-const oauthClientPromises = new Map<AuthType, Promise<AuthClient>>();
+const oauthClientPromises = new Map<string, Promise<AuthClient>>();
+
+function oauthClientCacheKey(
+  authType: AuthType,
+  profile: OAuthClientProfile,
+): string {
+  return `${authType}:${profile.clientId}`;
+}
 
 function getUseEncryptedStorageFlag() {
   return process.env[FORCE_ENCRYPTED_FILE_ENV_VAR] === 'true';
@@ -131,11 +167,12 @@ function isAdcCredentials(
 async function initOauthClient(
   authType: AuthType,
   config: Config,
+  profile: OAuthClientProfile,
 ): Promise<AuthClient> {
   function createBaseOAuth2Client(): OAuth2Client {
     const client = new OAuth2Client({
-      clientId: OAUTH_CLIENT_ID,
-      clientSecret: OAUTH_CLIENT_SECRET,
+      clientId: profile.clientId,
+      clientSecret: profile.clientSecret,
       transporterOptions: {
         proxy: config.getProxy(),
       },
@@ -149,7 +186,7 @@ async function initOauthClient(
         await cacheCredentials(tokens);
       }
 
-      await triggerPostAuthCallbacks(tokens);
+      await triggerPostAuthCallbacks(tokens, profile);
     });
 
     return client;
@@ -175,7 +212,7 @@ async function initOauthClient(
     if (isAdcCredentials(credentials)) {
       try {
         const auth = new GoogleAuth({
-          scopes: OAUTH_SCOPE,
+          scopes: profile.scopes,
         });
         const adcClient = auth.fromJSON({
           ...credentials,
@@ -217,6 +254,7 @@ async function initOauthClient(
           debugLogger.log('Loaded cached credentials.');
           await triggerPostAuthCallbacks(
             client.credentials || (credentials as Credentials),
+            profile,
           );
 
           return client;
@@ -279,7 +317,7 @@ async function initOauthClient(
 
     try {
       for (let i = 0; !success && i < maxRetries; i++) {
-        success = await authWithUserCode(client);
+        success = await authWithUserCode(client, profile);
         if (!success) {
           writeToStderr(
             '\nFailed to authenticate with user code.' +
@@ -312,7 +350,7 @@ async function initOauthClient(
       );
     }
 
-    await triggerPostAuthCallbacks(client.credentials);
+    await triggerPostAuthCallbacks(client.credentials, profile);
   } else {
     // In ACP mode, we skip the interactive consent and directly open the browser
     if (!config.getAcpMode()) {
@@ -322,7 +360,7 @@ async function initOauthClient(
       }
     }
 
-    const webLogin = await authWithWeb(client);
+    const webLogin = await authWithWeb(client, profile);
 
     coreEvents.emit(CoreEvent.UserFeedback, {
       severity: 'info',
@@ -424,7 +462,7 @@ async function initOauthClient(
       message: 'Authentication succeeded\n',
     });
 
-    await triggerPostAuthCallbacks(client.credentials);
+    await triggerPostAuthCallbacks(client.credentials, profile);
   }
 
   return client;
@@ -433,14 +471,19 @@ async function initOauthClient(
 export async function getOauthClient(
   authType: AuthType,
   config: Config,
+  profile: OAuthClientProfile = GEMINI_OAUTH_PROFILE,
 ): Promise<AuthClient> {
-  if (!oauthClientPromises.has(authType)) {
-    oauthClientPromises.set(authType, initOauthClient(authType, config));
+  const key = oauthClientCacheKey(authType, profile);
+  if (!oauthClientPromises.has(key)) {
+    oauthClientPromises.set(key, initOauthClient(authType, config, profile));
   }
-  return oauthClientPromises.get(authType)!;
+  return oauthClientPromises.get(key)!;
 }
 
-async function authWithUserCode(client: OAuth2Client): Promise<boolean> {
+async function authWithUserCode(
+  client: OAuth2Client,
+  profile: OAuthClientProfile,
+): Promise<boolean> {
   try {
     const redirectUri = 'https://codeassist.google.com/authcode';
     const codeVerifier = await client.generateCodeVerifierAsync();
@@ -448,7 +491,7 @@ async function authWithUserCode(client: OAuth2Client): Promise<boolean> {
     const authUrl: string = client.generateAuthUrl({
       redirect_uri: redirectUri,
       access_type: 'offline',
-      scope: OAUTH_SCOPE,
+      scope: profile.scopes,
       code_challenge_method: CodeChallengeMethod.S256,
       code_challenge: codeVerifier.codeChallenge,
       state,
@@ -534,7 +577,10 @@ async function authWithUserCode(client: OAuth2Client): Promise<boolean> {
   }
 }
 
-async function authWithWeb(client: OAuth2Client): Promise<OauthWebLogin> {
+async function authWithWeb(
+  client: OAuth2Client,
+  profile: OAuthClientProfile,
+): Promise<OauthWebLogin> {
   const port = await getAvailablePort();
   // The hostname used for the HTTP server binding (e.g., '0.0.0.0' in Docker).
   const host = process.env['OAUTH_CALLBACK_HOST'] || '127.0.0.1';
@@ -547,7 +593,7 @@ async function authWithWeb(client: OAuth2Client): Promise<OauthWebLogin> {
   const authUrl = client.generateAuthUrl({
     redirect_uri: redirectUri,
     access_type: 'offline',
-    scope: OAUTH_SCOPE,
+    scope: profile.scopes,
     state,
   });
 
