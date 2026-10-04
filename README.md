@@ -145,27 +145,46 @@ Integrate Gemini CLI directly into your GitHub workflows with
 
 ## 🔐 Authentication Options
 
-Choose the authentication method that best fits your needs:
+Choose the authentication method that best fits your needs. Option 1 is a proof
+of concept; Options 2 and 3 are the ones to build on.
 
-### Option 1: Sign in with Google (OAuth login using your Google Account)
+### Option 1: Sign in with Google (proof of concept)
 
-**✨ Best for:** Individual developers as well as anyone who has a Gemini Code
-Assist License. (see
-[quota limits and terms of service](https://cloud.google.com/gemini/docs/quotas)
-for details)
+**✨ Best for:** Curious developers with a spare Google account. Not your main
+one. Read that twice.
 
-**Benefits:**
+Gemini Code Assist for individuals stopped serving requests on June 18, 2026, so
+this fork sends **Sign in with Google** to
+[Antigravity](https://antigravity.google/) instead. That's a proof of concept
+bolted onto a retired backend, and it comes with strings attached:
 
-- **Free tier**: 60 requests/min and 1,000 requests/day
-- **Gemini 3 models** with 1M token context window
-- **No API key management** - just sign in with your Google account
-- **Automatic updates** to latest models
+<!-- prettier-ignore -->
+> [!WARNING]
+> **Don't use this with your primary Google account.** Requests are only served
+> for accounts Antigravity recognizes, and they spend the Antigravity quota
+> attached to that account.
 
-#### Start Gemini CLI, then choose _Sign in with Google_ and follow the browser authentication flow when prompted
+**Trade-offs:**
+
+- **No API key management**, if your account happens to be entitled
+- **Antigravity's model catalog**, not Gemini CLI's
+- **`403 SUBSCRIPTION_REQUIRED`** if the account has never used Antigravity
+- **Zero stability guarantee** - Google can change the OAuth client or endpoints
+  tomorrow and this stops working with no notice
+
+Start Gemini CLI, choose _Sign in with Google_, and follow the browser
+authentication flow when prompted:
 
 ```bash
 gemini
 ```
+
+No browser handy? `NO_BROWSER=true gemini` prints an authorization URL and asks
+you to paste the URL your browser lands on.
+
+Full details, configuration knobs, and troubleshooting live in the
+[Antigravity sign-in PoC](https://www.geminicli.com/docs/get-started/antigravity-sign-in-poc)
+doc.
 
 #### If you are using a paid Code Assist License from your organization, remember to set the Google Cloud Project
 
