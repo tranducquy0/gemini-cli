@@ -39,6 +39,13 @@ Select the authentication method that matches your situation in the table below:
   [Google AI Ultra for Business](https://support.google.com/a/answer/16345165)
   subscriptions.
 
+<!-- prettier-ignore -->
+> [!WARNING]
+> Gemini Code Assist for individuals stopped serving requests on June 18, 2026,
+> so **Sign in with Google** in this fork routes through Antigravity as a
+> [proof of concept](./antigravity-sign-in-poc.md). Don't use it with your
+> primary Google account.
+
 ## (Recommended) Sign in with Google <a id="login-google"></a>
 
 If you run Gemini CLI on your local machine, the simplest authentication method
@@ -48,6 +55,13 @@ your local machine).
 
 If you are a **Google AI Pro** or **Google AI Ultra** subscriber, use the Google
 account associated with your subscription.
+
+<!-- prettier-ignore -->
+> [!NOTE]
+> This fork signs you in to [Antigravity](./antigravity-sign-in-poc.md) instead of
+> Gemini Code Assist, which is a proof of concept. Requests are only served for
+> accounts that Antigravity recognizes, so expect `403` responses on accounts
+> that have never used Antigravity.
 
 To authenticate and use Gemini CLI:
 

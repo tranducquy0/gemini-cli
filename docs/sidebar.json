@@ -12,6 +12,10 @@
             "label": "Authentication",
             "slug": "docs/get-started/authentication"
           },
+          {
+            "label": "Antigravity sign-in (PoC)",
+            "slug": "docs/get-started/antigravity-sign-in-poc"
+          },
           { "label": "CLI cheatsheet", "slug": "docs/cli/cli-reference" },
           {
             "label": "Gemini 3 on Gemini CLI",
