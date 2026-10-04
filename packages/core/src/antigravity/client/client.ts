@@ -58,12 +58,38 @@ export function antigravityUserAgent(): string {
   );
 }
 
-export function antigravityHeaders(token?: string): Record<string, string> {
+/**
+ * Client identity Antigravity expects on every request.
+ *
+ * The entitlement check on the backend keys off this metadata: a request
+ * without it is not recognised as an Antigravity client and is rejected with
+ * `SUBSCRIPTION_REQUIRED` even for accounts that have access.
+ */
+export function antigravityClientMetadata(): string {
+  const platform =
+    process.platform === 'win32'
+      ? 'WINDOWS'
+      : process.platform === 'darwin'
+        ? 'MACOS'
+        : 'LINUX';
+  return JSON.stringify({
+    ideType: 'ANTIGRAVITY',
+    platform,
+    pluginType: 'GEMINI',
+  });
+}
+
+export function antigravityHeaders(
+  token?: string,
+  options: { accept?: string } = {},
+): Record<string, string> {
   return {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     'Content-Type': 'application/json',
+    ...(options.accept ? { Accept: options.accept } : {}),
     'User-Agent': antigravityUserAgent(),
     'X-Goog-Api-Client': 'antigravity-cli',
+    'Client-Metadata': antigravityClientMetadata(),
   };
 }
 

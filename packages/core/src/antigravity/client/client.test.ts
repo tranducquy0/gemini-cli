@@ -65,7 +65,22 @@ describe('antigravity/client', () => {
         'Content-Type': 'application/json',
         'User-Agent': expect.stringContaining('antigravity/'),
         'X-Goog-Api-Client': 'antigravity-cli',
+        'Client-Metadata': expect.any(String),
       });
+    });
+
+    it('identifies the client as Antigravity', () => {
+      expect(JSON.parse(antigravityHeaders()['Client-Metadata']!)).toEqual({
+        ideType: 'ANTIGRAVITY',
+        platform: expect.stringMatching(/^(MACOS|LINUX|WINDOWS)$/),
+        pluginType: 'GEMINI',
+      });
+    });
+
+    it('requests an event stream when streaming', () => {
+      expect(
+        antigravityHeaders(undefined, { accept: 'text/event-stream' })['Accept'],
+      ).toBe('text/event-stream');
     });
 
     it('omits Authorization when no token is supplied', () => {

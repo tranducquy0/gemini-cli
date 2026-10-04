@@ -55,14 +55,30 @@ export const authEvents = new EventEmitter();
  * Identifies the Google OAuth client (and its scopes) used for a login flow.
  *
  * Gemini CLI and Antigravity are separate first-party clients: they use
- * different OAuth client IDs and, therefore, different scope grants. Every
- * token operation must be performed with the profile that issued the cached
- * refresh token, otherwise Google rejects the refresh.
+ * different OAuth client IDs and, therefore, different scope grants and flow
+ * parameters. Every token operation must be performed with the profile that
+ * issued the cached refresh token, otherwise Google rejects the refresh.
  */
 export interface OAuthClientProfile {
   clientId: string;
   clientSecret: string;
   scopes: string[];
+  /**
+   * Fixed loopback redirect URI. Google's authorization endpoint validates the
+   * redirect URI against the client's registration (the port may vary for
+   * loopback clients, the path may not), so a client that ships its own callback
+   * route must declare it here instead of using the generated one.
+   */
+  redirectUri?: string;
+  /** Sends PKCE (S256) on the browser flow. Required by some clients. */
+  pkce?: boolean;
+  /** Extra parameters appended to the authorization request. */
+  extraAuthParams?: Record<string, string>;
+  /**
+   * Redirect URI for the no-browser (user code) flow. Defaults to Gemini CLI's
+   * registered code-assist callback; clients without one cannot use it.
+   */
+  userCodeRedirectUri?: string;
 }
 
 async function triggerPostAuthCallbacks(
@@ -123,6 +139,8 @@ export const GEMINI_OAUTH_PROFILE: OAuthClientProfile = {
 };
 
 const HTTP_REDIRECT = 301;
+const CODE_ASSIST_USER_CODE_REDIRECT_URI =
+  'https://codeassist.google.com/authcode';
 const SIGN_IN_SUCCESS_URL =
   'https://developers.google.com/gemini-code-assist/auth_success_gemini';
 const SIGN_IN_FAILURE_URL =
@@ -485,9 +503,18 @@ async function authWithUserCode(
   profile: OAuthClientProfile,
 ): Promise<boolean> {
   try {
-    const redirectUri = 'https://codeassist.google.com/authcode';
-    const codeVerifier = await client.generateCodeVerifierAsync();
+    // Gemini CLI's OAuth app has a redirect that renders the code on a Google
+    // page. Other clients (Antigravity) only have a loopback callback, so their
+    // user-code flow advertises that unreachable loopback URI and asks for the
+    // pasted callback URL instead.
+    const pasteCallbackUrl =
+      !profile.userCodeRedirectUri && !!profile.redirectUri;
+    const redirectUri =
+      profile.userCodeRedirectUri ??
+      profile.redirectUri ??
+      CODE_ASSIST_USER_CODE_REDIRECT_URI;
     const state = crypto.randomBytes(32).toString('hex');
+    const codeVerifier = await client.generateCodeVerifierAsync();
     const authUrl: string = client.generateAuthUrl({
       redirect_uri: redirectUri,
       access_type: 'offline',
@@ -495,15 +522,21 @@ async function authWithUserCode(
       code_challenge_method: CodeChallengeMethod.S256,
       code_challenge: codeVerifier.codeChallenge,
       state,
+      ...profile.extraAuthParams,
     });
     writeToStdout(
       'Please visit the following URL to authorize the application:\n\n' +
         authUrl +
-        '\n\n',
+        '\n\n' +
+        (pasteCallbackUrl
+          ? 'Your browser cannot reach this machine, so the authorization page ' +
+            'will show an error. Paste the full URL from your browser address ' +
+            'bar instead.\n\n'
+          : ''),
     );
 
     let authTimeoutId: NodeJS.Timeout | undefined;
-    const code = await new Promise<string>((resolve, reject) => {
+    const answer = await new Promise<string>((resolve, reject) => {
       const rl = readline.createInterface({
         input: process.stdin,
         output: createWorkingStdio().stdout,
@@ -526,18 +559,29 @@ async function authWithUserCode(
       };
       abortController.signal.addEventListener('abort', onAbort, { once: true });
 
-      rl.question('Enter the authorization code: ', (code) => {
-        abortController.signal.removeEventListener('abort', onAbort);
-        rl.close();
-        resolve(code.trim());
-      });
+      rl.question(
+        pasteCallbackUrl
+          ? `Paste the redirected URL (${redirectUri}): `
+          : 'Enter the authorization code: ',
+        (value) => {
+          abortController.signal.removeEventListener('abort', onAbort);
+          rl.close();
+          resolve(value.trim());
+        },
+      );
     }).finally(() => {
       if (authTimeoutId) clearTimeout(authTimeoutId);
     });
 
+    const pastedResult = pasteCallbackUrl
+      ? extractPastedCallbackCode(answer, state)
+      : undefined;
+    const code = pastedResult ? pastedResult.code : answer;
+
     if (!code) {
-      writeToStderr('Authorization code is required.\n');
-      debugLogger.error('Authorization code is required.');
+      const message = pastedResult?.error ?? 'Authorization code is required.';
+      writeToStderr(`${message}\n`);
+      debugLogger.error(message);
       return false;
     }
 
@@ -577,30 +621,83 @@ async function authWithUserCode(
   }
 }
 
+/**
+ * Extracts the authorization code from a callback URL pasted by the user, e.g.
+ * when NO_BROWSER is set and the browser cannot reach the loopback callback.
+ *
+ * Accepts a full URL or a bare query string and validates the state, mirroring
+ * the checks the callback server performs.
+ */
+function extractPastedCallbackCode(
+  pasted: string,
+  expectedState: string,
+): { code?: string; error?: string } {
+  if (!pasted) {
+    return { error: 'No redirect URL was provided.' };
+  }
+
+  const query = pasted.includes('?')
+    ? pasted.slice(pasted.indexOf('?') + 1)
+    : pasted;
+  let params: URLSearchParams;
+  try {
+    params = new URLSearchParams(query);
+  } catch {
+    return { error: 'Could not parse the pasted URL.' };
+  }
+
+  const error = params.get('error');
+  if (error) {
+    return {
+      error: `Authorization failed: ${error.slice(0, 200)}`,
+    };
+  }
+  const code = params.get('code');
+  if (!code) {
+    return {
+      error: 'The pasted URL does not contain an authorization code.',
+    };
+  }
+  if (params.get('state') !== expectedState) {
+    return {
+      error:
+        'OAuth state mismatch. Please retry the sign-in and paste the new URL.',
+    };
+  }
+  return { code };
+}
+
 async function authWithWeb(
   client: OAuth2Client,
   profile: OAuthClientProfile,
 ): Promise<OauthWebLogin> {
-  const port = await getAvailablePort();
-  // The hostname used for the HTTP server binding (e.g., '0.0.0.0' in Docker).
-  const host = process.env['OAUTH_CALLBACK_HOST'] || '127.0.0.1';
-  // The `redirectUri` sent to Google's authorization server MUST use a loopback IP literal
-  // (i.e., 'localhost' or '127.0.0.1'). This is a strict security policy for credentials of
-  // type 'Desktop app' or 'Web application' (when using loopback flow) to mitigate
-  // authorization code interception attacks.
-  const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
+  // Clients that ship their own callback route must advertise that exact route:
+  // Google validates the redirect URI against the client's registration before
+  // showing the consent screen, and an unregistered path fails with a bare 400.
+  const redirectUri = profile.redirectUri ?? (await getLoopbackRedirectUri());
+  const { host, port } = await getCallbackBinding(redirectUri);
   const state = crypto.randomBytes(32).toString('hex');
+  const codeVerifier = profile.pkce
+    ? await client.generateCodeVerifierAsync()
+    : undefined;
+
   const authUrl = client.generateAuthUrl({
     redirect_uri: redirectUri,
     access_type: 'offline',
     scope: profile.scopes,
     state,
+    ...(codeVerifier && {
+      code_challenge_method: CodeChallengeMethod.S256,
+      code_challenge: codeVerifier.codeChallenge,
+    }),
+    ...profile.extraAuthParams,
   });
 
   const loginCompletePromise = new Promise<void>((resolve, reject) => {
     const server = http.createServer(async (req, res) => {
       try {
-        if (req.url!.indexOf('/oauth2callback') === -1) {
+        const callbackPath = new URL(redirectUri).pathname;
+        if (req.url!.indexOf(callbackPath) === -1) {
           res.writeHead(HTTP_REDIRECT, { Location: SIGN_IN_FAILURE_URL });
           res.end();
           reject(
@@ -637,6 +734,7 @@ async function authWithWeb(
             const { tokens } = await client.getToken({
               code: qs.get('code')!,
               redirect_uri: redirectUri,
+              ...(codeVerifier && { codeVerifier: codeVerifier.codeVerifier }),
             });
             client.setCredentials(tokens);
 
@@ -703,6 +801,34 @@ async function authWithWeb(
     authUrl,
     loginCompletePromise,
   };
+}
+
+/**
+ * Builds the default loopback redirect URI for the browser flow.
+ *
+ * The `redirect_uri` sent to Google's authorization server MUST use a loopback
+ * IP literal (i.e., 'localhost' or '127.0.0.1'). This is a strict security
+ * policy for credentials of type 'Desktop app' or 'Web application' (when using
+ * loopback flow) to mitigate authorization code interception attacks.
+ */
+async function getLoopbackRedirectUri(): Promise<string> {
+  const port = await getAvailablePort();
+  return `http://127.0.0.1:${port}/oauth2callback`;
+}
+
+/**
+ * Resolves the host/port the callback server binds to. The port always comes
+ * from the redirect URI so the listener matches what was sent to Google; the
+ * host honours `OAUTH_CALLBACK_HOST` (e.g., '0.0.0.0' in Docker).
+ */
+async function getCallbackBinding(
+  redirectUri: string,
+): Promise<{ host: string; port: number }> {
+  const url = new URL(redirectUri);
+  const host =
+    process.env['OAUTH_CALLBACK_HOST'] || url.hostname || '127.0.0.1';
+  const port = url.port ? Number(url.port) : await getAvailablePort();
+  return { host, port };
 }
 
 export function getAvailablePort(): Promise<number> {

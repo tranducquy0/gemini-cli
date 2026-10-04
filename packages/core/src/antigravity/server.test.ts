@@ -100,8 +100,10 @@ describe('antigravity/server', () => {
     };
     expect(options.headers).toEqual({
       'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
       'User-Agent': expect.stringContaining('antigravity/'),
       'X-Goog-Api-Client': 'antigravity-cli',
+      'Client-Metadata': expect.stringContaining('ANTIGRAVITY'),
       'X-Custom': 'yes',
     });
   });

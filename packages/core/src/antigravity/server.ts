@@ -25,7 +25,7 @@ import { antigravityHeaders, endpointCandidates } from './client/client.js';
 export function antigravityBackend(): V1InternalBackend {
   return {
     baseUrl: `${endpointCandidates()[0].replace(/\/+$/, '')}/v1internal`,
-    headers: antigravityHeaders(),
+    headers: antigravityHeaders(undefined, { accept: 'text/event-stream' }),
     decorateGenerateRequest: (request: object) => ({
       ...request,
       requestType: 'agent',

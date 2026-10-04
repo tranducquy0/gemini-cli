@@ -45,6 +45,7 @@ export type AntigravityCredentials = {
  */
 export const CLIENT_ID_ENV_VAR = 'ANTIGRAVITY_CLIENT_ID';
 export const CLIENT_SECRET_ENV_VAR = 'ANTIGRAVITY_CLIENT_SECRET';
+export const REDIRECT_URI_ENV_VAR = 'ANTIGRAVITY_REDIRECT_URI';
 
 const DEFAULT_OAUTH_CLIENT_ID =
   'MTA3MTAwNjA2MDU5MS10bWhzc2luMmgyMWxjcmUyMzV2dG9sb2poNGc0MDNlc' +
@@ -53,18 +54,27 @@ const DEFAULT_OAUTH_CLIENT_SECRET =
   'R09DU1BYLUs1OEZXUjQ' + '4NkxkTEoxbUxCOHNYQzR6NnFEQWY=';
 
 /**
- * Antigravity's scope grant. `cclog` and `experimentsandconfigs` are granted to
- * this client only; requesting them from the Gemini CLI client ID fails the
- * consent screen.
+ * Antigravity's scope grant. `aicode`, `cclog` and `experimentsandconfigs` are
+ * granted to this client only; requesting them from the Gemini CLI client ID
+ * fails the consent screen.
  */
 const ANTIGRAVITY_OAUTH_SCOPE = [
-  'openid',
+  'https://www.googleapis.com/auth/aicode',
   'https://www.googleapis.com/auth/cloud-platform',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/cclog',
   'https://www.googleapis.com/auth/experimentsandconfigs',
 ];
+
+/**
+ * Antigravity's registered loopback callback.
+ *
+ * Google validates the redirect URI against the client's registration before
+ * showing the consent screen and answers a mismatched path with a bare HTTP
+ * 400, so this must stay exactly as the Antigravity clients send it.
+ */
+export const ANTIGRAVITY_REDIRECT_URI = 'http://localhost:51121/oauth-callback';
 
 export function antigravityOAuthProfile(): OAuthClientProfile {
   return {
@@ -74,6 +84,12 @@ export function antigravityOAuthProfile(): OAuthClientProfile {
       antigravityEnv(CLIENT_SECRET_ENV_VAR) ||
       atob(DEFAULT_OAUTH_CLIENT_SECRET),
     scopes: ANTIGRAVITY_OAUTH_SCOPE,
+    redirectUri:
+      antigravityEnv(REDIRECT_URI_ENV_VAR) || ANTIGRAVITY_REDIRECT_URI,
+    // The Antigravity client requires PKCE on the authorization request.
+    pkce: true,
+    // Ensures a refresh token is issued even when a grant already exists.
+    extraAuthParams: { prompt: 'consent' },
   };
 }
 

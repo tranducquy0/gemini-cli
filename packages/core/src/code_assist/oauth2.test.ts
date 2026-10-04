@@ -282,6 +282,122 @@ describe('oauth2', () => {
       );
     });
 
+    it('should honour the client profile redirect uri, PKCE and extra params', async () => {
+      const mockAuthUrl = 'https://example.com/auth';
+      const mockCode = 'test-code';
+      const mockState = 'test-state';
+      const mockTokens = {
+        access_token: 'test-access-token',
+        refresh_token: 'test-refresh-token',
+      };
+
+      const mockGenerateAuthUrl = vi.fn().mockReturnValue(mockAuthUrl);
+      const mockGetToken = vi.fn().mockResolvedValue({ tokens: mockTokens });
+      const mockGenerateCodeVerifierAsync = vi.fn().mockResolvedValue({
+        codeVerifier: 'test-verifier',
+        codeChallenge: 'test-challenge',
+      });
+      const mockOAuth2Client = {
+        generateAuthUrl: mockGenerateAuthUrl,
+        generateCodeVerifierAsync: mockGenerateCodeVerifierAsync,
+        getToken: mockGetToken,
+        setCredentials: vi.fn(),
+        getAccessToken: vi
+          .fn()
+          .mockResolvedValue({ token: 'mock-access-token' }),
+        credentials: mockTokens,
+        on: vi.fn(),
+      } as unknown as OAuth2Client;
+      vi.mocked(OAuth2Client).mockImplementation(() => mockOAuth2Client);
+
+      vi.spyOn(crypto, 'randomBytes').mockReturnValue(mockState as never);
+      vi.mocked(open).mockImplementation(
+        async () => ({ on: vi.fn() }) as never,
+      );
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: vi
+          .fn()
+          .mockResolvedValue({ email: 'test-google-account@gmail.com' }),
+      } as unknown as Response);
+
+      let requestCallback!: http.RequestListener<
+        typeof http.IncomingMessage,
+        typeof http.ServerResponse
+      >;
+      let serverListeningCallback: (value: unknown) => void;
+      const serverListeningPromise = new Promise(
+        (resolve) => (serverListeningCallback = resolve),
+      );
+
+      const mockHttpServer = {
+        listen: vi.fn((_port: number, _host: string, callback?: () => void) => {
+          if (callback) {
+            callback();
+          }
+          serverListeningCallback(undefined);
+        }),
+        close: vi.fn((callback?: () => void) => callback?.()),
+        on: vi.fn(),
+        address: () => ({ port: 51121 }),
+      };
+      (http.createServer as Mock).mockImplementation((cb) => {
+        requestCallback = cb as http.RequestListener<
+          typeof http.IncomingMessage,
+          typeof http.ServerResponse
+        >;
+        return mockHttpServer as unknown as http.Server;
+      });
+
+      const clientPromise = getOauthClient(
+        AuthType.LOGIN_WITH_GOOGLE,
+        mockConfig,
+        {
+          clientId: 'profile-client-id',
+          clientSecret: 'profile-client-secret',
+          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          redirectUri: 'http://localhost:51121/oauth-callback',
+          pkce: true,
+          extraAuthParams: { prompt: 'consent' },
+        },
+      );
+
+      await serverListeningPromise;
+
+      requestCallback(
+        {
+          url: `/oauth-callback?code=${mockCode}&state=${mockState}`,
+        } as http.IncomingMessage,
+        { writeHead: vi.fn(), end: vi.fn() } as unknown as http.ServerResponse,
+      );
+
+      await clientPromise;
+
+      expect(mockGenerateAuthUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          redirect_uri: 'http://localhost:51121/oauth-callback',
+          code_challenge: 'test-challenge',
+          code_challenge_method: 'S256',
+          prompt: 'consent',
+        }),
+      );
+      // The callback server must bind to the host/port of the declared redirect.
+      expect(mockHttpServer.listen).toHaveBeenCalledWith(
+        51121,
+        'localhost',
+        expect.any(Function),
+      );
+      expect(mockGetToken).toHaveBeenCalledWith({
+        code: mockCode,
+        redirect_uri: 'http://localhost:51121/oauth-callback',
+        codeVerifier: 'test-verifier',
+      });
+      expect(vi.mocked(OAuth2Client).mock.calls[0][0]).toMatchObject({
+        clientId: 'profile-client-id',
+        clientSecret: 'profile-client-secret',
+      });
+    });
+
     it('should merge credentials on token refresh preserving refresh_token and other fields', async () => {
       const mockAuthUrl = 'https://example.com/auth';
       const mockTokens = {
@@ -475,6 +591,126 @@ describe('oauth2', () => {
         redirect_uri: 'https://codeassist.google.com/authcode',
       });
       expect(mockOAuth2Client.setCredentials).toHaveBeenCalledWith(mockTokens);
+    });
+
+    it('should accept a pasted callback URL for clients without a user code redirect', async () => {
+      const mockConfigWithNoBrowser = {
+        getNoBrowser: () => true,
+        getProxy: () => 'http://test.proxy.com:8080',
+        isBrowserLaunchSuppressed: () => true,
+        isInteractive: () => true,
+      } as unknown as Config;
+
+      const mockCodeVerifier = {
+        codeChallenge: 'test-challenge',
+        codeVerifier: 'test-verifier',
+      };
+      const mockState = 'test-state';
+      const mockCode = 'pasted-code';
+      const mockTokens = {
+        access_token: 'test-access-token',
+        refresh_token: 'test-refresh-token',
+      };
+
+      const mockGenerateAuthUrl = vi
+        .fn()
+        .mockReturnValue('https://example.com/auth');
+      const mockGetToken = vi.fn().mockResolvedValue({ tokens: mockTokens });
+      const mockOAuth2Client = {
+        generateAuthUrl: mockGenerateAuthUrl,
+        getToken: mockGetToken,
+        generateCodeVerifierAsync: vi.fn().mockResolvedValue(mockCodeVerifier),
+        setCredentials: vi.fn(),
+        getAccessToken: vi.fn().mockResolvedValue({ token: 'test-token' }),
+        on: vi.fn(),
+        credentials: {},
+      } as unknown as OAuth2Client;
+      vi.mocked(OAuth2Client).mockImplementation(() => mockOAuth2Client);
+
+      vi.spyOn(crypto, 'randomBytes').mockReturnValue(mockState as never);
+
+      const mockReadline = {
+        question: vi.fn((_query, callback) =>
+          callback(
+            `http://localhost:51121/oauth-callback?state=${mockState}&code=${mockCode}`,
+          ),
+        ),
+        close: vi.fn(),
+        on: vi.fn(),
+      };
+      (readline.createInterface as Mock).mockReturnValue(mockReadline);
+
+      await getOauthClient(
+        AuthType.LOGIN_WITH_GOOGLE,
+        mockConfigWithNoBrowser,
+        {
+          clientId: 'profile-client-id',
+          clientSecret: 'profile-client-secret',
+          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          redirectUri: 'http://localhost:51121/oauth-callback',
+          pkce: true,
+        },
+      );
+
+      expect(mockReadline.question).toHaveBeenCalledWith(
+        'Paste the redirected URL (http://localhost:51121/oauth-callback): ',
+        expect.any(Function),
+      );
+      expect(mockGenerateAuthUrl).toHaveBeenCalledWith(
+        expect.objectContaining({
+          redirect_uri: 'http://localhost:51121/oauth-callback',
+        }),
+      );
+      expect(mockGetToken).toHaveBeenCalledWith({
+        code: mockCode,
+        codeVerifier: mockCodeVerifier.codeVerifier,
+        redirect_uri: 'http://localhost:51121/oauth-callback',
+      });
+      expect(mockOAuth2Client.setCredentials).toHaveBeenCalledWith(mockTokens);
+    });
+
+    it('should reject a pasted callback URL with a mismatched state', async () => {
+      const mockConfigWithNoBrowser = {
+        getNoBrowser: () => true,
+        getProxy: () => 'http://test.proxy.com:8080',
+        isBrowserLaunchSuppressed: () => true,
+        isInteractive: () => true,
+      } as unknown as Config;
+
+      vi.spyOn(crypto, 'randomBytes').mockReturnValue('test-state' as never);
+
+      const mockGetToken = vi.fn();
+      const mockOAuth2Client = {
+        generateAuthUrl: vi.fn().mockReturnValue('https://example.com/auth'),
+        getToken: mockGetToken,
+        generateCodeVerifierAsync: vi
+          .fn()
+          .mockResolvedValue({ codeChallenge: 'c', codeVerifier: 'v' }),
+        setCredentials: vi.fn(),
+        getAccessToken: vi.fn().mockResolvedValue({ token: 'test-token' }),
+        on: vi.fn(),
+        credentials: {},
+      } as unknown as OAuth2Client;
+      vi.mocked(OAuth2Client).mockImplementation(() => mockOAuth2Client);
+
+      (readline.createInterface as Mock).mockReturnValue({
+        question: vi.fn((_query, callback) =>
+          callback('http://localhost:51121/oauth-callback?state=other&code=x'),
+        ),
+        close: vi.fn(),
+        on: vi.fn(),
+      });
+
+      await expect(
+        getOauthClient(AuthType.LOGIN_WITH_GOOGLE, mockConfigWithNoBrowser, {
+          clientId: 'profile-client-id',
+          clientSecret: 'profile-client-secret',
+          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          redirectUri: 'http://localhost:51121/oauth-callback',
+        }),
+      ).rejects.toThrow('Failed to authenticate with user code');
+
+      expect(mockGetToken).not.toHaveBeenCalled();
     });
 
     it('should cache Google Account when logging in with user code', async () => {
