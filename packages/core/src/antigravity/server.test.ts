@@ -10,7 +10,11 @@ import type { Config } from '../config/config.js';
 import { LlmRole } from '../telemetry/types.js';
 import { UserTierId } from '../code_assist/types.js';
 import { CodeAssistServer } from '../code_assist/server.js';
-import { antigravityBackend, createAntigravityServer } from './server.js';
+import {
+  antigravityBackend,
+  createAntigravityEnvelope,
+  createAntigravityServer,
+} from './server.js';
 import { DEFAULT_ENDPOINT } from './client/client.js';
 
 const requestMock = vi.fn();
@@ -126,10 +130,61 @@ describe('antigravity/server', () => {
       requestType: 'agent',
       userAgent: 'antigravity',
     });
-    expect(body.requestId).toEqual(expect.stringMatching(/^agent-\d+-/));
+    expect(body.requestId).toMatch(
+      /^agent\/[0-9a-f-]{36}\/\d+\/[0-9a-f-]{36}\/1$/,
+    );
+    expect(body.request.labels).toEqual({
+      last_step_index: '0',
+      request_id: expect.stringMatching(/^[0-9a-f-]{36}-0$/),
+      trajectory_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      used_claude: 'false',
+      used_claude_conservative: 'false',
+      used_non_gemini_model: 'false',
+    });
+    expect(body.request.sessionId).toMatch(/^-?\d+$/);
+    // No last_execution_id on the opening turn.
+    expect(body.request.labels).not.toHaveProperty('last_execution_id');
     expect(body.request.contents).toEqual([
       { role: 'user', parts: [{ text: 'hello' }] },
     ]);
+  });
+
+  it('keeps one trajectory across requests in a session', async () => {
+    const server = createAntigravityServer(
+      authClient,
+      userData,
+      {},
+      'session-1',
+    );
+
+    await drain(server);
+    await drain(server);
+
+    const bodies = requestMock.mock.calls.map((call) =>
+      JSON.parse(call[0].body as string),
+    );
+    expect(bodies[1].request.labels.trajectory_id).toBe(
+      bodies[0].request.labels.trajectory_id,
+    );
+    // Each request carries its own inner session id.
+    expect(bodies[1].request.sessionId).not.toBe(bodies[0].request.sessionId);
+  });
+
+  it('marks non-Gemini models in the labels', () => {
+    const decorate = createAntigravityEnvelope('session-1');
+    const decorated = decorate({
+      model: 'claude-opus-4-6-thinking',
+      request: { contents: [{}, {}] },
+    }) as { request: { labels: Record<string, string> } };
+
+    expect(decorated.request.labels).toMatchObject({
+      used_claude: 'true',
+      used_claude_conservative: 'true',
+      used_non_gemini_model: 'true',
+      last_step_index: '1',
+      // Present from the second turn onwards.
+      last_execution_id: expect.any(String),
+    });
   });
 
   it('adds the Antigravity envelope fields to non-streaming requests', async () => {
