@@ -53,7 +53,7 @@ delete cliPkg.dependencies;
 delete cliPkg.devDependencies;
 delete cliPkg.scripts;
 delete cliPkg.main;
-delete cliPkg.config;
+delete cliPkg.geminiCli;
 
 cliPkg.optionalDependencies = optionalDependencies;
 

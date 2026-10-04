@@ -52,7 +52,7 @@ updatePackageJson('packages/cli/package.json', (pkg) => {
   delete pkg.devDependencies;
   delete pkg.scripts;
   delete pkg.main;
-  delete pkg.config; // Deletes the sandboxImageUri
+  delete pkg.geminiCli; // Deletes the sandboxImageUri
 });
 
 // Update @google/gemini-cli-a2a-server

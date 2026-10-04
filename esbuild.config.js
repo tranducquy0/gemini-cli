@@ -99,7 +99,7 @@ const cliConfig = {
     __dirname: '__chunk_dirname',
     'process.env.CLI_VERSION': JSON.stringify(pkg.version),
     'process.env.GEMINI_SANDBOX_IMAGE_DEFAULT': JSON.stringify(
-      pkg.config?.sandboxImageUri,
+      pkg.geminiCli?.sandboxImageUri,
     ),
     'process.env.NODE_ENV': JSON.stringify(
       process.env.NODE_ENV || 'production',

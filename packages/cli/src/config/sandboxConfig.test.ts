@@ -56,7 +56,7 @@ describe('loadSandboxConfig', () => {
     delete process.env['SANDBOX'];
     delete process.env['GEMINI_SANDBOX'];
     mockedGetPackageJson.mockResolvedValue({
-      config: { sandboxImageUri: 'default/image' },
+      geminiCli: { sandboxImageUri: 'default/image' },
     });
   });
 

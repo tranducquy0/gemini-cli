@@ -11,7 +11,7 @@ import {
 import { debugLogger } from './debugLogger.js';
 
 export type PackageJson = BasePackageJson & {
-  config?: {
+  geminiCli?: {
     sandboxImageUri?: string;
   };
 };

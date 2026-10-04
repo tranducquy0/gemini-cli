@@ -13,9 +13,6 @@
     "type": "git",
     "url": "git+https://github.com/google-gemini/gemini-cli.git"
   },
-  "config": {
-    "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.64.0-nightly.20260929.gd75234cae"
-  },
   "scripts": {
     "start": "cross-env NODE_ENV=development node scripts/start.js",
     "start:prod": "cross-env NODE_ENV=production node scripts/start.js",
@@ -176,5 +173,8 @@
     "*.{json,md}": [
       "prettier --write"
     ]
+  },
+  "geminiCli": {
+    "sandboxImageUri": "us-docker.pkg.dev/gemini-code-dev/gemini-cli/sandbox:0.64.0-nightly.20260929.gd75234cae"
   }
 }

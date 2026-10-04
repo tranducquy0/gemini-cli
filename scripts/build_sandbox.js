@@ -47,7 +47,7 @@ const argv = yargs(hideBin(process.argv))
   .option('i', {
     alias: 'image',
     type: 'string',
-    default: cliPkgJson.config.sandboxImageUri,
+    default: cliPkgJson.geminiCli.sandboxImageUri,
     description: 'use <image> name for custom image',
   })
   .option('output-file', {

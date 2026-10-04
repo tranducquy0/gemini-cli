@@ -155,7 +155,7 @@ export async function loadSandboxConfig(
     process.env['GEMINI_SANDBOX_IMAGE'] ??
     process.env['GEMINI_SANDBOX_IMAGE_DEFAULT'] ??
     customImage ??
-    packageJson?.config?.sandboxImageUri;
+    packageJson?.geminiCli?.sandboxImageUri;
 
   const isNative =
     command === 'windows-native' ||
