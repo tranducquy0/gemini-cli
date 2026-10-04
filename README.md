@@ -1,10 +1,9 @@
 # Gemini CLI
 
-[![Gemini CLI CI](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/ci.yml)
-[![Gemini CLI E2E (Chained)](https://github.com/google-gemini/gemini-cli/actions/workflows/chained_e2e.yml/badge.svg)](https://github.com/google-gemini/gemini-cli/actions/workflows/chained_e2e.yml)
 [![Version](https://img.shields.io/npm/v/@google/gemini-cli)](https://www.npmjs.com/package/@google/gemini-cli)
 [![License](https://img.shields.io/github/license/google-gemini/gemini-cli)](https://github.com/google-gemini/gemini-cli/blob/main/LICENSE)
-[![View Code Wiki](https://assets.codewiki.google/readme-badge/static.svg)](https://codewiki.google/github.com/google-gemini/gemini-cli?utm_source=badge&utm_medium=github&utm_campaign=github.com/google-gemini/gemini-cli)
+
+> Unofficial fork. See [This is a fork](#-this-is-a-fork) for what changed.
 
 ![Gemini CLI Screenshot](/docs/assets/gemini-screenshot.png)
 
@@ -14,10 +13,58 @@ most direct path from your prompt to our model.
 
 Learn all about Gemini CLI in our [documentation](https://geminicli.com/docs/).
 
+## 🍴 This is a fork
+
+This repository is a fork of Google's
+[Gemini CLI](https://github.com/google-gemini/gemini-cli), maintained
+independently at
+[tranducquy0/gemini-cli](https://github.com/tranducquy0/gemini-cli). It isn't
+affiliated with or supported by Google, and it tracks upstream only loosely.
+Upstream stays Apache 2.0 licensed; so does this.
+
+Two changes separate it from upstream, both deliberate:
+
+### Reduced Google telemetry
+
+Upstream ships telemetry that reports to Google. This fork doesn't:
+
+- **Clearcut analytics is gone**, along with all 52 of its emission paths.
+- **The Google Cloud exporters are gone** - no Cloud Trace, Cloud Logging, or
+  Cloud Monitoring. The `gcp` telemetry target no longer exists; `local` is the
+  only one left.
+- **Your Google account email is no longer attached** to telemetry attributes.
+- **Telemetry is off by default** and stays local unless you turn it on.
+
+What remains is standard OpenTelemetry, pointed wherever you want it:
+
+```bash
+# Send to your own collector, or to a file with target: "local"
+export GEMINI_TELEMETRY_ENABLED=true
+export GEMINI_TELEMETRY_OTLP_ENDPOINT="http://localhost:4317"
+```
+
+The full event and metric reference is in the
+[telemetry docs](https://www.geminicli.com/docs/cli/telemetry).
+
+### Sign in with Google is a proof of concept
+
+Gemini Code Assist for individuals stopped serving requests on June 18, 2026, so
+upstream's **Sign in with Google** no longer has a working backend. This fork
+points it at [Antigravity](https://antigravity.google/) instead.
+
+<!-- prettier-ignore -->
+> [!WARNING]
+> Don't use this with your primary Google account. It's unsupported, requests
+> count against that account's Antigravity quota, and accounts Antigravity
+> doesn't recognize get `403 SUBSCRIPTION_REQUIRED` no matter what.
+
+Use an API key or Vertex AI for anything you depend on. Details, configuration,
+and troubleshooting are in the
+[Antigravity sign-in PoC](https://www.geminicli.com/docs/get-started/antigravity-sign-in-poc)
+doc.
+
 ## 🚀 Why Gemini CLI?
 
-- **🎯 Free tier**: 60 requests/min and 1,000 requests/day with personal Google
-  account.
 - **🧠 Powerful Gemini 3 models**: Access to improved reasoning and 1M token
   context window.
 - **🔧 Built-in tools**: Google Search grounding, file operations, shell
