@@ -10,6 +10,7 @@ import {
   PROD_ENDPOINT,
   antigravityHeaders,
   antigravityMethodUrl,
+  describeAccountResponse,
   endpointCandidates,
   extractAccount,
   fetchAntigravityAccount,
@@ -79,7 +80,9 @@ describe('antigravity/client', () => {
 
     it('requests an event stream when streaming', () => {
       expect(
-        antigravityHeaders(undefined, { accept: 'text/event-stream' })['Accept'],
+        antigravityHeaders(undefined, { accept: 'text/event-stream' })[
+          'Accept'
+        ],
       ).toBe('text/event-stream');
     });
 
@@ -136,6 +139,32 @@ describe('antigravity/client', () => {
 
     it('returns undefined for non-objects', () => {
       expect(extractAccount('nope')).toBeUndefined();
+    });
+  });
+
+  describe('describeAccountResponse', () => {
+    it('summarizes the plan fields without logging identifiers', () => {
+      const summary = describeAccountResponse(
+        'https://host',
+        { projectId: 'voltaic-hangout-z1qhf', tierId: 'free-tier' },
+        {
+          cloudaicompanionProject: 'voltaic-hangout-z1qhf',
+          currentTier: { id: 'free-tier', name: 'Antigravity' },
+          gcpManaged: false,
+        },
+      );
+
+      expect(summary).toContain('project=voltaic-hangout-z1qhf');
+      expect(summary).toContain('tier=free-tier');
+      expect(summary).toContain('paidTier=none');
+      expect(summary).toContain('gcpManaged=false');
+      expect(summary).toContain('currentTier');
+    });
+
+    it('describes a missing account', () => {
+      expect(
+        describeAccountResponse('https://host', undefined, 'nope'),
+      ).toContain('project=none');
     });
   });
 

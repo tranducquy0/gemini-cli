@@ -268,9 +268,14 @@ export async function fetchAntigravityAccount(
       );
       if (!res.ok) {
         lastError = new Error(`${endpoint} responded with HTTP ${res.status}`);
+        debugLogger.warn(
+          `Antigravity loadCodeAssist ${endpoint} -> HTTP ${res.status}`,
+        );
         continue;
       }
-      const account = extractAccount(await res.json());
+      const data: unknown = await res.json();
+      const account = extractAccount(data);
+      debugLogger.log(describeAccountResponse(endpoint, account, data));
       if (account?.projectId) return account;
       const projectId = await listCloudAICompanionProjects(token);
       return projectId ? { ...account, projectId } : account;
@@ -285,4 +290,29 @@ export async function fetchAntigravityAccount(
 
 export async function loadCodeAssist(token: string) {
   return (await fetchAntigravityAccount(token))?.projectId;
+}
+
+/**
+ * Summarizes a `loadCodeAssist` response for the debug log.
+ *
+ * The entitlement on the account decides whether generate requests are served
+ * at all (`403 SUBSCRIPTION_REQUIRED`), so log the plan fields and the shape of
+ * the payload. Only field names and plan identifiers are logged, never tokens
+ * or account identifiers.
+ */
+export function describeAccountResponse(
+  endpoint: string,
+  account: AntigravityAccount | undefined,
+  data: unknown,
+): string {
+  const keys = isRecord(data) ? Object.keys(data).sort().join(',') : 'n/a';
+  const gcpManaged = isRecord(data)
+    ? String(data['gcpManaged'] ?? 'unknown')
+    : 'unknown';
+  return (
+    `Antigravity loadCodeAssist ${endpoint} -> project=${account?.projectId ?? 'none'}` +
+    ` tier=${account?.tierId ?? 'none'}(${account?.tierName ?? '?'})` +
+    ` paidTier=${account?.paidTierId ?? 'none'}(${account?.paidTierName ?? '?'})` +
+    ` gcpManaged=${gcpManaged} fields=[${keys}]`
+  );
 }
